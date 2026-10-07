@@ -1,0 +1,27 @@
+{
+ "payload": {
+  "v": 2,
+  "adata": [
+   [
+    "ObNXvG7cFzJgRxQs",
+    "A+8/8ui+uF4=",
+    10000,
+    256,
+    128,
+    "aes",
+    "gcm",
+    "zlib"
+   ],
+   "plaintext",
+   1,
+   0
+  ],
+  "ct": "lGX6wt729fgvEXxJO81VrD3SilWZc079X1Ewto4DcT/IRfFO0xtk30eA6lcegdYS6DrrjyZx77nBkGbVmq+6qpk4srVLg7slZGHiumxuod0Pw3BBlSk5vaip2U9PTeRPZuOK/dSTaWAJbgACR8nt+1Ad+5QmSUNbyAKXkKQWgyHDUzbh3aPsxvcYTcVPw73T84gn0N6m4WLLUKcR5D7XCjUqF6MB3LB7DU/Nr/70JrDXcdcHyW61R/xLyT3As6cWPJOywUB0nuND/uedZvKMCB709VKK5a1WN1Bj2QLiPe9O74C16n0=",
+  "meta": {
+   "expire": "never"
+  }
+ },
+ "secret": "D2gZegJHrVyAMJVuZmew9a1sjfQzETSmQs9Kaco3dST7",
+ "password": "hunter2",
+ "expected": "# ► Adult Streaming\n\n## ▷ Tubes\n\n* ⭐ **[Example Tube](https://tube.example/)**, [2](https://tube2.example/) - Videos / Free / [Discord](https://discord.example/x)\n* [Another Site](https://another.example/path_(x)) - Clips\n\n# ► Comics\n\n* [Comic Place](https://comics.example/) - Webcomics / Ünïcödé\n"
+}
