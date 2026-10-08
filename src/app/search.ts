@@ -27,7 +27,7 @@ export function buildIndex(rows: Row[]): Index {
   const nn = rows.map((r) => strip(r.n));
   const hay = rows.map((r, i) => {
     const plain = r.n.toLowerCase();
-    return `${r.n} ${r.h} ${r.d}` + (nn[i] !== plain ? ` ${nn[i]}` : "");
+    return `${plain} ${r.h.toLowerCase()} ${r.d.toLowerCase()}` + (nn[i] !== plain ? ` ${nn[i]}` : "");
   });
   return { rows, hay, nn, strict: new uFuzzy(OPTS), typo: new uFuzzy({ ...OPTS, intraMode: 1 }) };
 }
@@ -48,12 +48,30 @@ function candidates(ix: Index, q: string): number[] {
     if (qn) for (let i = 0; i < ix.rows.length; i++) if (ix.nn[i]!.startsWith(qn)) out.push(i);
     return out;
   }
+  // Plain substring searches cover the common typing path without running
+  // Unicode fuzzy matching across the entire directory on every keystroke.
+  const terms = q.split(/\s+/).filter(Boolean);
+  const exactName: number[] = [];
+  const exactOther: number[] = [];
+  const qn = strip(q);
+  for (let i = 0; i < ix.hay.length; i++) {
+    const h = ix.hay[i]!;
+    const name = ix.nn[i]!;
+    if (name.includes(qn)) exactName.push(i);
+    else if (terms.every((t) => h.includes(t))) exactOther.push(i);
+  }
+  const exact = exactName.concat(exactOther).slice(0, 1500);
+  if (exact.length >= 5) return exact;
   const run = (uf: uFuzzy) => {
     const [idxs, info, order] = uf.search(ix.hay, q, 3, 1500);
     if (!idxs) return [];
     return info && order ? order.map((i) => info.idx[i]!) : idxs;
   };
-  let found = run(ix.strict);
+  let found = exact;
+  if (found.length < 5) {
+    const seen = new Set(found);
+    found = found.concat(run(ix.strict).filter((i) => !seen.has(i)));
+  }
   if (found.length < 5) {
     // typo tolerant pass, keeping strict hits first
     const seen = new Set(found);

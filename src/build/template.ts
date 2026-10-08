@@ -50,8 +50,8 @@ export function renderHtml(t: TemplateInput): string {
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#faf7ff" media="(prefers-color-scheme:light)">
-<meta name="theme-color" content="#07060d" media="(prefers-color-scheme:dark)">
+<meta name="theme-color" content="#f6f8fb" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#101820" media="(prefers-color-scheme:dark)">
 <title>Portal</title>
 <link rel="icon" href="${FAVICON}">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -59,7 +59,7 @@ export function renderHtml(t: TemplateInput): string {
 <link rel="modulepreload" href="${t.mainJs}">
 <style>${t.css}</style></head><body><main>
 <header class="top-nav"><a href="#" class="brand" aria-label="Portal home"><span class="brand-text">Portal</span></a><div class="nav-actions"><button id="btn-settings" type="button" class="keycap btn-action" aria-label="Settings">${gearSvg(16)}</button></div></header>
-<section class="hero"><small id="greet">Welcome back</small><h1>Everything free,<br><em>one search away.</em></h1></section>
+<section class="hero"><h1>Find the good stuff.</h1><p>Search the FMHY directory or browse by category.</p></section>
 <div class="bar" role="search">${SEARCH_ICON}<input id="q" type="search" placeholder="Search anything: movies, apps, tools…" aria-label="Search links" role="combobox" aria-expanded="false" aria-controls="list" aria-autocomplete="list" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" dir="auto"><button id="clr" type="button" aria-label="Clear search" hidden>\u00d7</button></div>
 <div class="opts">${nsfwChip}</div>
 <p class="st" id="st" aria-live="polite" hidden></p>
@@ -86,8 +86,8 @@ export function manifest() {
     start_url: "./",
     scope: "./",
     display: "standalone",
-    background_color: "#07060d",
-    theme_color: "#07060d",
+    background_color: "#101820",
+    theme_color: "#101820",
     icons: [
       { src: "icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "icon-512.png", sizes: "512x512", type: "image/png" },

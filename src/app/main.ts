@@ -77,12 +77,6 @@ for (const id of ["star", "nsfw"] as const) {
   });
 }
 
-// Layout state reacts instantly for mobile search bar docking
-const body = document.body;
-q.addEventListener("focus", () => body.classList.add("f"));
-q.addEventListener("blur", () => body.classList.remove("f"));
-q.addEventListener("input", () => body.classList.toggle("q", !!q.value.trim()));
-
 const edit = $("edit");
 edit.addEventListener("click", () => {
   const on = pins.classList.toggle("edit");
@@ -103,24 +97,6 @@ $("btn-settings")?.addEventListener("click", () => {
 $("btn-shortcuts")?.addEventListener("click", () => {
   void loadCore().then(() => document.dispatchEvent(new CustomEvent("fh:open-shortcuts")));
 });
-
-// Rotating search placeholder
-const initialPlaceholder = q.placeholder;
-const PLACEHOLDERS = [
-  initialPlaceholder,
-  'Try "adblock", "ublock", "dns"...',
-  'Try "streaming", "anime", "movies"...',
-  'Try "audio", "flac", "podcasts"...',
-  'Try "books", "libgen", "manga"...',
-  'No match? Tap Google / AI Mode / DuckDuckGo / Yandex below...',
-  'Press / or Ctrl+K to search',
-];
-let phIdx = 0;
-setInterval(() => {
-  if (document.activeElement === q || q.value.trim()) return;
-  phIdx = (phIdx + 1) % PLACEHOLDERS.length;
-  q.placeholder = PLACEHOLDERS[phIdx]!;
-}, 3500);
 
 // Focus search only where keyboard is primary input
 if (matchMedia("(hover: hover) and (pointer: fine)").matches) q.focus({ preventScroll: true });

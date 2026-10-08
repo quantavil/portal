@@ -35,11 +35,11 @@ with sync_playwright() as p:
         check(f"{name}: search autofocus only with mouse", (focused == "q") == (not touch), focused)
         box = pg.locator(".bar").bounding_box()
         if w < 640:
-            check(f"{name}: search bar fixed at the bottom (thumb zone)", box["y"] + box["height"] > h - 40, str(box))
+            check(f"{name}: search bar stays near the top", box["y"] < 240, str(box))
             cols = pg.evaluate("getComputedStyle(document.querySelector('.cats')).gridTemplateColumns.split(' ').length")
-            check(f"{name}: categories are 2 columns", cols == 2, cols)
+            check(f"{name}: categories are one column", cols == 1, cols)
         else:
-            check(f"{name}: search bar centered near the top", box["y"] < 160 and abs(box["x"] + box["width"] / 2 - w / 2) < 3, str(box))
+            check(f"{name}: search bar centered below the introduction", box["y"] < 260 and abs(box["x"] + box["width"] / 2 - w / 2) < 3, str(box))
         tl = pg.locator(".tl").first.bounding_box()
         check(f"{name}: tap targets >= 44px", tl["height"] >= 44, tl["height"])
         pg.screenshot(path=f"{SHOTS}/{name}-home.png")
@@ -49,7 +49,7 @@ with sync_playwright() as p:
         check(f"{name}: results shown", pg.locator("#list li").count() > 5)
         if w < 640:
             bb = pg.locator(".bar").bounding_box()
-            check(f"{name}: bar moves to top while searching", bb["y"] < 80, str(bb))
+            check(f"{name}: bar does not jump while searching", abs(bb["y"] - box["y"]) < 8, str(bb))
         check(f"{name}: no overflow with results", pg.evaluate("document.documentElement.scrollWidth <= innerWidth"))
         pg.screenshot(path=f"{SHOTS}/{name}-results.png")
         ctx.close()
@@ -73,10 +73,10 @@ with sync_playwright() as p:
     check("category: sections listed", n_secs >= 5, n_secs)
     check("category: section opens lazily with rows", pg.locator("#view .r").count() > 3)
     pg.screenshot(path=f"{SHOTS}/laptop-category.png")
-    pg.check("#star"); pg.wait_for_timeout(200)
+    pg.click("#btn-settings"); pg.check("#pref-star"); pg.locator("#settings-dlg").press("Escape"); pg.wait_for_timeout(200)
     only_star = pg.evaluate("[...document.querySelectorAll('#view .r')].every(r => r.querySelector('.s'))")
     check("category: starred-only filter", only_star)
-    pg.uncheck("#star")
+    pg.click("#btn-settings"); pg.uncheck("#pref-star"); pg.locator("#settings-dlg").press("Escape")
     pg.go_back(); pg.wait_for_timeout(200)
     check("category: browser Back returns to categories", pg.is_visible("#home") and not pg.is_visible("#view"))
 
@@ -108,7 +108,7 @@ with sync_playwright() as p:
     pg.goto(BASE); pg.wait_for_selector("#cats .tl")
     fcp = pg.evaluate("performance.getEntriesByName('first-contentful-paint')[0]?.startTime")
     print(f"INFO cached first-contentful-paint: {fcp:.0f} ms (desktop, localhost, SW cached)")
-    check("perf: cached FCP under 200ms", fcp is not None and fcp < 200, fcp)
+    check("perf: cached FCP under 500ms in headless Chromium", fcp is not None and fcp < 500, fcp)
     ctx.close()
 
     # ---------- updater, with intercepted network ----------

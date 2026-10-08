@@ -112,14 +112,6 @@ function extRow(k: EngineKey, term: string, idx: number): HTMLLIElement {
   return li;
 }
 
-function transition(fn: () => void) {
-  if ("startViewTransition" in document && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    (document as any).startViewTransition(fn);
-  } else {
-    fn();
-  }
-}
-
 function rebuild() {
   const all = nsfwPage ? [...pages.filter((p) => !p.nsfw), nsfwPage] : pages.filter((p) => !p.nsfw);
   pages = all;
@@ -501,7 +493,6 @@ function showView(p: PageData) {
 function route() {
   if (!ready) return;
   const term = q.value.trim();
-  document.body.classList.toggle("q", !!term);
   clr.hidden = !q.value;
   const key = decodeURIComponent(location.hash.slice(1).split("?")[0] || "");
   const page = vis().find((p) => p.k === key);
@@ -513,27 +504,25 @@ function route() {
   if (barEl) barEl.hidden = showVw;
   if (optsEl) optsEl.hidden = showVw;
 
-  transition(() => {
-    if (!showRes) document.getElementById("ext")?.setAttribute("hidden", "");
-    list.hidden = !showRes;
-    st.hidden = !showRes;
-    view.hidden = !showVw;
-    home.hidden = showRes || showVw;
-    if (showRes) showResults(term);
-    else if (showVw) showView(page!);
-    else {
-      q.setAttribute("aria-expanded", "false");
-      q.removeAttribute("aria-activedescendant");
-    }
-    more.hidden = more.hidden || !showRes;
-  });
+  if (!showRes) document.getElementById("ext")?.setAttribute("hidden", "");
+  list.hidden = !showRes;
+  st.hidden = !showRes;
+  view.hidden = !showVw;
+  home.hidden = showRes || showVw;
+  if (showRes) showResults(term);
+  else if (showVw) showView(page!);
+  else {
+    q.setAttribute("aria-expanded", "false");
+    q.removeAttribute("aria-activedescendant");
+  }
+  more.hidden = more.hidden || !showRes;
 }
 
-let raf = 0;
+let searchTimer = 0;
 const schedule = () => {
   limit = PAGE;
-  cancelAnimationFrame(raf);
-  raf = requestAnimationFrame(route);
+  clearTimeout(searchTimer);
+  searchTimer = window.setTimeout(route, 70);
 };
 
 // ---------- events ----------
