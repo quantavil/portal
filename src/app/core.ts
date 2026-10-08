@@ -4,9 +4,9 @@ import { loadNsfw, loadSeed, mergePages, readStored } from "./data";
 import { idbKV } from "./kv";
 import { entryRow, toRows, type Row } from "./model";
 import { isPinned, renderPins, togglePin } from "./pins";
-import { catHue, link, pinButton, rowEl, setPinned } from "./render";
+import { catHue, pinButton, rowEl, setPinned } from "./render";
 import { buildIndex, search, type Hit, type Index } from "./search";
-import { copySvg, searchSvg } from "../shared/svg";
+import { backSvg, copySvg, searchSvg } from "../shared/svg";
 import { addRecent, clearRecents, prefs, save, type Theme } from "./store";
 import { showToast } from "./toast";
 
@@ -31,6 +31,8 @@ let hits: Hit[] = [];
 let limit = PAGE;
 let sel = -1;
 let ready = false;
+let hasNavigated = false;
+let catObs: IntersectionObserver | null = null;
 
 const fmt = (n: number) => n.toLocaleString();
 const vis = () => pages.filter((p) => !p.nsfw || prefs.nsfw);
@@ -220,7 +222,17 @@ function searchIconSvg(): SVGSVGElement {
   return svg;
 }
 
-function sectionEl(p: PageData, s: PageData["s"][number], idx: number): HTMLElement | null {
+type RowItem = { el: HTMLElement; text: string };
+type SubGroup = { subLi: HTMLElement; subText: string; rows: RowItem[] };
+type SecData = {
+  sec: HTMLElement;
+  countEl: HTMLElement;
+  origCount: number;
+  direct: RowItem[];
+  subs: SubGroup[];
+};
+
+function sectionEl(p: PageData, s: PageData["s"][number], idx: number): SecData | null {
   const keep = (e: { 3: number }) => !prefs.star || !!(e[3] & F_STAR);
   const direct = s.e.filter(keep);
   const subs = s.b.map((b) => ({ n: b.n, e: b.e.filter(keep) })).filter((b) => b.e.length);
@@ -260,24 +272,46 @@ function sectionEl(p: PageData, s: PageData["s"][number], idx: number): HTMLElem
 
   const ol = document.createElement("ol");
   ol.className = "list";
-  for (const e of direct) ol.append(rowEl(entryRow(e, p, s.n, "")));
+  const directRows: RowItem[] = [];
+  for (const e of direct) {
+    const el = rowEl(entryRow(e, p, s.n, ""));
+    directRows.push({ el, text: `${e[0]} ${e[2]}`.toLowerCase() });
+    ol.append(el);
+  }
+  const subGroups: SubGroup[] = [];
   for (const b of subs) {
     const subLi = document.createElement("li");
     subLi.className = "sub";
     subLi.textContent = b.n;
     ol.append(subLi);
-    for (const e of b.e) ol.append(rowEl(entryRow(e, p, s.n, b.n)));
+    const subRows: RowItem[] = [];
+    for (const e of b.e) {
+      const el = rowEl(entryRow(e, p, s.n, b.n));
+      subRows.push({ el, text: `${e[0]} ${e[2]}`.toLowerCase() });
+      ol.append(el);
+    }
+    subGroups.push({ subLi, subText: b.n.toLowerCase(), rows: subRows });
   }
 
   sec.append(hdr, ol);
-  return sec;
+  return { sec, countEl: count, origCount: n, direct: directRows, subs: subGroups };
 }
 
 function showView(p: PageData) {
   const topBar = document.createElement("div");
   topBar.className = "cat-top-bar";
-  const back = link("#", "\u2039 All Categories", "back keycap");
-  back.removeAttribute("rel");
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "back keycap";
+  back.setAttribute("aria-label", "Back");
+  back.innerHTML = backSvg(18);
+  back.addEventListener("click", () => {
+    if (hasNavigated && history.length > 1) {
+      history.back();
+    } else {
+      location.hash = "";
+    }
+  });
   topBar.append(back);
 
   const hueVal = catHue(p.k);
@@ -320,24 +354,33 @@ function showView(p: PageData) {
   catClr.type = "button";
   catClr.id = "cat-clr";
   catClr.textContent = "\u00d7";
+  catClr.setAttribute("aria-label", "Clear filter");
   catClr.hidden = true;
   catClr.addEventListener("click", () => {
     catInput.value = "";
     catClr.hidden = true;
+    clearTimeout(filterTimer);
+    cancelAnimationFrame(filterRaf);
     filterCat("");
     catInput.focus();
   });
   let filterTimer = 0;
+  let filterRaf = 0;
   catInput.addEventListener("input", () => {
-    const val = catInput.value.trim().toLowerCase();
-    catClr.hidden = !catInput.value;
+    const val = catInput.value;
+    catClr.hidden = !val;
     clearTimeout(filterTimer);
-    filterTimer = window.setTimeout(() => filterCat(val), 50);
+    cancelAnimationFrame(filterRaf);
+    filterTimer = window.setTimeout(() => {
+      filterRaf = requestAnimationFrame(() => filterCat(val));
+    }, 30);
   });
   catInput.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       catInput.value = "";
       catClr.hidden = true;
+      clearTimeout(filterTimer);
+      cancelAnimationFrame(filterRaf);
       filterCat("");
     }
   });
@@ -394,56 +437,64 @@ function showView(p: PageData) {
   // Content column
   const content = document.createElement("div");
   content.className = "cat-content";
-  const secEls = p.s
+  const secDataList = p.s
     .map((s, idx) => sectionEl(p, s, idx))
-    .filter((x): x is HTMLElement => !!x);
+    .filter((x): x is SecData => !!x);
+  const secEls = secDataList.map((d) => d.sec);
   content.append(...secEls);
 
   const catLayout = document.createElement("div");
   catLayout.className = "cat-layout";
   catLayout.append(rail, content);
 
-  // Pre-index rows for blazing fast (<5ms) in-category filtering
-  const secCaches = secEls.map((s) => {
-    const countEl = s.querySelector(".cat-sec-count");
-    const idx = +(s.id.replace("sec-", "") || "0");
-    const orig = p.s[idx];
-    const origCount = orig ? orig.e.length + orig.b.reduce((m, b) => m + b.e.length, 0) : 0;
-    const rows = Array.from(s.querySelectorAll<HTMLElement>(".r")).map((r) => ({
-      el: r,
-      text: (r.textContent || "").toLowerCase(),
-    }));
-    return { s, countEl, origCount, rows };
-  });
-
   function filterCat(qStr: string) {
-    for (const sc of secCaches) {
+    const terms = qStr.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    for (const sc of secDataList) {
       let visible = 0;
-      for (const r of sc.rows) {
-        const match = !qStr || r.text.includes(qStr);
-        r.el.hidden = !match;
+      for (const r of sc.direct) {
+        const match = !terms.length || terms.every((t) => r.text.includes(t));
+        if (r.el.hidden !== !match) r.el.hidden = !match;
         if (match) visible++;
       }
-      sc.s.hidden = visible === 0;
-      if (sc.countEl) {
-        sc.countEl.textContent = fmt(qStr ? visible : sc.origCount);
+      for (const sub of sc.subs) {
+        let subVis = 0;
+        const subMatch = terms.length > 0 && terms.every((t) => sub.subText.includes(t));
+        for (const r of sub.rows) {
+          const match = !terms.length || subMatch || terms.every((t) => r.text.includes(t));
+          if (r.el.hidden !== !match) r.el.hidden = !match;
+          if (match) {
+            visible++;
+            subVis++;
+          }
+        }
+        const hideSub = terms.length > 0 && subVis === 0;
+        if (sub.subLi.hidden !== hideSub) sub.subLi.hidden = hideSub;
       }
+      const hideSec = visible === 0;
+      if (sc.sec.hidden !== hideSec) sc.sec.hidden = hideSec;
+      const txt = fmt(terms.length ? visible : sc.origCount);
+      if (sc.countEl.textContent !== txt) sc.countEl.textContent = txt;
     }
   }
 
+  if (catObs) {
+    catObs.disconnect();
+    catObs = null;
+  }
   if ("IntersectionObserver" in window) {
-    const obs = new IntersectionObserver((entries) => {
+    const railItems = rail.querySelectorAll(".cat-rail-item");
+    catObs = new IntersectionObserver((entries) => {
+      if (catInput.value.trim()) return;
       for (const ent of entries) {
         if (ent.isIntersecting) {
           const id = ent.target.id;
-          const items = rail.querySelectorAll(".cat-rail-item");
-          for (const it of items) {
+          for (const it of railItems) {
             it.classList.toggle("active", (it as HTMLElement).dataset.target === id);
           }
         }
       }
     }, { rootMargin: "-10% 0px -70% 0px" });
-    for (const s of secEls) obs.observe(s);
+    for (const s of secEls) catObs.observe(s);
   }
 
   const elements: HTMLElement[] = [topBar, hero, secChips, catLayout];
@@ -506,7 +557,10 @@ $("moreb")?.addEventListener("click", () => {
   limit += 100;
   route();
 });
-addEventListener("hashchange", route);
+addEventListener("hashchange", () => {
+  hasNavigated = true;
+  route();
+});
 
 q.addEventListener("keydown", (e) => {
   if (e.key === "ArrowDown" || e.key === "ArrowUp") {

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { PAGES } from "../src/shared/pages";
 import { SCHEMA, type Seed } from "../src/shared/types";
+import { backSvg } from "../src/shared/svg";
 
 /** Runs the real build end to end on small synthetic docs, fully offline. */
 let tmp = "";
@@ -101,6 +102,13 @@ describe("build output", () => {
   test("shortcuts button is hidden on touch devices via media query", async () => {
     const html = await read("index.html");
     expect(html).toContain("#btn-shortcuts{display:none!important}");
+  });
+  test("backSvg produces valid SVG string with arrow-left", () => {
+    const svg = backSvg(18);
+    expect(svg).toContain("<svg");
+    expect(svg).toContain('width="18"');
+    expect(svg).toContain('height="18"');
+    expect(svg).toContain("<path");
   });
   test("build refuses to ship when the parser invariant fails (a page with no entries)", async () => {
     await Bun.write(join(tmp, "docs", "ai.md"), "nothing useful here\n");

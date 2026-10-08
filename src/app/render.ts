@@ -19,7 +19,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: s
   return e;
 }
 
-export function link(url: string, text: string, cls: string): HTMLAnchorElement {
+function link(url: string, text: string, cls: string): HTMLAnchorElement {
   const a = el("a", cls, text);
   a.href = url;
   a.rel = "noopener noreferrer";
