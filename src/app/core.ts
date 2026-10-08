@@ -6,7 +6,21 @@ import { entryRow, toRows, type Row } from "./model";
 import { isPinned, renderPins, togglePin } from "./pins";
 import { catHue, pinButton, rowEl, setPinned } from "./render";
 import { buildIndex, search, type Hit, type Index } from "./search";
-import { backSvg, copySvg, searchSvg } from "../shared/svg";
+import {
+  backSvg,
+  copySvg,
+  searchSvg,
+  yandexSvg,
+  googleSvg,
+  googleAiSvg,
+  duckDuckGoSvg,
+  githubSvg,
+  wikiSvg,
+  redditSvg,
+  arrowUpSvg,
+  arrowDownSvg,
+  dragHandleSvg,
+} from "../shared/svg";
 import { addRecent, clearRecents, prefs, save, type Theme } from "./store";
 import { showToast } from "./toast";
 
@@ -40,12 +54,77 @@ const countOf = (p: PageData) => p.s.reduce((n, s) => n + s.e.length + s.b.reduc
 
 // ---------- external search: tap-only chips + zero-hit rows, no remote fetch ----------
 const ENGINES = {
-  g: { n: "Google", u: (s: string) => `https://www.google.com/search?q=${encodeURIComponent(s)}` },
-  a: { n: "Google AI", u: (s: string) => `https://www.google.com/search?udm=50&q=${encodeURIComponent(s)}` },
-  d: { n: "DuckDuckGo", u: (s: string) => `https://duckduckgo.com/?q=${encodeURIComponent(s)}` },
-  y: { n: "Yandex", u: (s: string) => `https://yandex.com/search/?text=${encodeURIComponent(s)}` },
+  y: { n: "Yandex", u: (s: string) => (s ? `https://yandex.com/search/?text=${encodeURIComponent(s)}` : "https://yandex.com"), svg: yandexSvg, cls: "dock-chip-yandex" },
+  g: { n: "Google", u: (s: string) => (s ? `https://www.google.com/search?q=${encodeURIComponent(s)}` : "https://www.google.com"), svg: googleSvg, cls: "dock-chip-google" },
+  a: { n: "Google AI", u: (s: string) => (s ? `https://www.google.com/search?udm=50&q=${encodeURIComponent(s)}` : "https://www.google.com/search?udm=50"), svg: googleAiSvg, cls: "dock-chip-ai" },
+  d: { n: "DDG", u: (s: string) => (s ? `https://duckduckgo.com/?q=${encodeURIComponent(s)}` : "https://duckduckgo.com"), svg: duckDuckGoSvg, cls: "dock-chip-ddg" },
+  gh: { n: "GitHub", u: (s: string) => (s ? `https://github.com/search?q=${encodeURIComponent(s)}` : "https://github.com"), svg: githubSvg, cls: "dock-chip-github" },
+  w: { n: "Wiki", u: (s: string) => (s ? `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(s)}` : "https://en.wikipedia.org"), svg: wikiSvg, cls: "dock-chip-wiki" },
+  r: { n: "Reddit", u: (s: string) => (s ? `https://www.reddit.com/r/piracy/search/?q=${encodeURIComponent(s)}` : "https://www.reddit.com/r/piracy"), svg: redditSvg, cls: "dock-chip-reddit" },
 } as const;
 type EngineKey = keyof typeof ENGINES;
+
+function renderDockEngines() {
+  const row = document.getElementById("dock-engines");
+  if (!row) return;
+  row.textContent = "";
+  const lbl = document.createElement("span");
+  lbl.className = "dock-engine-label";
+  lbl.textContent = "Web:";
+  row.append(lbl);
+
+  const disabled = new Set(prefs.disabledEngines);
+  const ordered = prefs.engines.filter((k) => k in ENGINES && !disabled.has(k)) as EngineKey[];
+
+  for (const k of ordered) {
+    const conf = ENGINES[k];
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `dock-chip ${conf.cls}`;
+    btn.dataset.engine = k;
+    btn.draggable = true;
+    btn.setAttribute("aria-label", `Search ${conf.n}`);
+    btn.innerHTML = `${conf.svg(13)}<span>${conf.n}</span>`;
+
+    btn.addEventListener("dragstart", (e) => {
+      e.dataTransfer?.setData("text/plain", `dock:${k}`);
+      btn.classList.add("dragging");
+    });
+    btn.addEventListener("dragend", () => {
+      btn.classList.remove("dragging");
+      row.querySelectorAll(".dock-chip").forEach((b) => b.classList.remove("drag-over"));
+    });
+    btn.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      btn.classList.add("drag-over");
+    });
+    btn.addEventListener("dragleave", () => {
+      btn.classList.remove("drag-over");
+    });
+    btn.addEventListener("drop", (e) => {
+      e.preventDefault();
+      btn.classList.remove("drag-over");
+      const data = e.dataTransfer?.getData("text/plain") || "";
+      if (data.startsWith("dock:")) {
+        const fromKey = data.slice(5);
+        if (fromKey !== k) {
+          const fromIdx = prefs.engines.indexOf(fromKey);
+          const toIdx = prefs.engines.indexOf(k);
+          if (fromIdx >= 0 && toIdx >= 0) {
+            const [moved] = prefs.engines.splice(fromIdx, 1);
+            prefs.engines.splice(toIdx, 0, moved!);
+            save();
+            renderDockEngines();
+            const sv = $("settings-view");
+            if (sv && !sv.hidden) renderSettingsPage(sv);
+          }
+        }
+      }
+    });
+
+    row.append(btn);
+  }
+}
 function openExternal(url: string) {
   if (prefs.newTab) window.open(url, "_blank", "noopener,noreferrer");
   else location.assign(url);
@@ -74,13 +153,16 @@ function renderExtStrip(term: string) {
   lbl.className = "ext-lbl";
   lbl.textContent = "Web:";
   bar.append(lbl);
-  (Object.keys(ENGINES) as EngineKey[]).forEach((k) => {
+  const disabled = new Set(prefs.disabledEngines);
+  const ordered = prefs.engines.filter((k) => k in ENGINES && !disabled.has(k)) as EngineKey[];
+  ordered.forEach((k) => {
+    const conf = ENGINES[k];
     const b = document.createElement("button");
     b.type = "button";
     b.className = "ext-chip keycap";
-    b.textContent = ENGINES[k].n;
-    b.setAttribute("aria-label", `Search ${ENGINES[k].n} for "${term}"`);
-    b.addEventListener("click", () => openExternal(ENGINES[k].u(term)));
+    b.innerHTML = `${conf.svg(12)}<span>${conf.n}</span>`;
+    b.setAttribute("aria-label", `Search ${conf.n} for "${term}"`);
+    b.addEventListener("click", () => openExternal(conf.u(term)));
     bar.append(b);
   });
   bar.hidden = false;
@@ -303,8 +385,8 @@ function showView(p: PageData) {
   const back = document.createElement("button");
   back.type = "button";
   back.className = "back keycap";
-  back.setAttribute("aria-label", "Back");
-  back.innerHTML = backSvg(18);
+  back.setAttribute("aria-label", "Back to Categories");
+  back.innerHTML = `${backSvg(16)}<span>Back to Categories</span>`;
   back.addEventListener("click", () => {
     if (hasNavigated && history.length > 1) {
       history.back();
@@ -516,23 +598,33 @@ function route() {
   document.body.classList.toggle("q", !!term);
   clr.hidden = !q.value;
   const key = decodeURIComponent(location.hash.slice(1).split("?")[0] || "");
-  const page = vis().find((p) => p.k === key);
+  const isSettings = key === "settings";
+  const page = !isSettings ? vis().find((p) => p.k === key) : undefined;
   const showRes = !!term;
   const showVw = !showRes && !!page;
+  const showSettings = !showRes && isSettings;
 
   const barEl = document.querySelector<HTMLElement>(".bar");
   const optsEl = document.querySelector<HTMLElement>(".opts");
-  if (barEl) barEl.hidden = showVw;
-  if (optsEl) optsEl.hidden = showVw;
+  if (barEl) barEl.hidden = showVw || showSettings;
+  if (optsEl) optsEl.hidden = showVw || showSettings;
 
   if (!showRes) document.getElementById("ext")?.setAttribute("hidden", "");
   list.hidden = !showRes;
   st.hidden = !showRes;
   view.hidden = !showVw;
-  home.hidden = showRes || showVw;
+  const settingsView = $("settings-view");
+  if (settingsView) {
+    settingsView.hidden = !showSettings;
+    if (showSettings) {
+      renderSettingsPage(settingsView);
+      window.scrollTo(0, 0);
+    }
+  }
+  home.hidden = showRes || showVw || showSettings;
   if (showRes) showResults(term);
   else if (showVw) showView(page!);
-  else {
+  else if (!showSettings) {
     q.setAttribute("aria-expanded", "false");
     q.removeAttribute("aria-activedescendant");
   }
@@ -601,7 +693,10 @@ window.addEventListener("keydown", (e) => {
     if (dlg.open) dlg.close();
     else dlg.showModal();
   } else if (e.key === "Escape") {
-    (document.getElementById("settings-dlg") as HTMLDialogElement | null)?.close();
+    if (location.hash === "#settings") {
+      if (hasNavigated) history.back();
+      else location.hash = "#";
+    }
     (document.getElementById("shortcuts-dlg") as HTMLDialogElement | null)?.close();
   }
 });
@@ -652,70 +747,184 @@ document.addEventListener("fh:prefs", async () => {
 // Clear recents buttons
 $("clr-recents")?.addEventListener("click", () => clearRecents());
 
-// Dynamic dialog creation
-function getSettingsDialog(): HTMLDialogElement {
-  let dlg = document.getElementById("settings-dlg") as HTMLDialogElement | null;
-  if (dlg) return dlg;
+// ---------- dedicated settings page & draggable search engine workbench ----------
+function renderSettingsPage(container: HTMLElement) {
+  container.textContent = "";
 
-  dlg = document.createElement("dialog");
-  dlg.id = "settings-dlg";
-  dlg.className = "dlg";
-  dlg.setAttribute("aria-labelledby", "settings-h");
+  const hero = document.createElement("div");
+  hero.className = "cat-hero settings-hero";
 
-  const header = document.createElement("div");
-  header.className = "dlg-header";
-  const h3 = document.createElement("h3");
-  h3.id = "settings-h";
-  h3.textContent = "Settings";
-  const closeBtn = document.createElement("button");
-  closeBtn.type = "button";
-  closeBtn.className = "btn-text";
-  closeBtn.setAttribute("aria-label", "Close settings");
-  closeBtn.textContent = "✕";
-  closeBtn.addEventListener("click", () => dlg!.close());
-  header.append(h3, closeBtn);
-
-  const body = document.createElement("div");
-  body.className = "dlg-body";
-
-  // 1. New tab
-  const rowNewTab = document.createElement("div");
-  rowNewTab.className = "setting-row";
-  const infoNewTab = document.createElement("div");
-  infoNewTab.className = "setting-info";
-  const spanNewTab = document.createElement("span");
-  spanNewTab.textContent = "Open links in new tab";
-  const pNewTab = document.createElement("p");
-  pNewTab.textContent = "Keep Portal open";
-  infoNewTab.append(spanNewTab, pNewTab);
-  const cbNewTab = document.createElement("input");
-  cbNewTab.type = "checkbox";
-  cbNewTab.className = "switch";
-  cbNewTab.setAttribute("role", "switch");
-  cbNewTab.id = "pref-newtab";
-  cbNewTab.checked = prefs.newTab;
-  cbNewTab.addEventListener("change", () => {
-    prefs.newTab = cbNewTab.checked;
-    save();
-  });
-  rowNewTab.append(infoNewTab, cbNewTab);
-  rowNewTab.style.cursor = "pointer";
-  rowNewTab.addEventListener("click", (e) => {
-    if (e.target === cbNewTab) return;
-    cbNewTab.checked = !cbNewTab.checked;
-    cbNewTab.dispatchEvent(new Event("change"));
+  const backBtn = document.createElement("button");
+  backBtn.type = "button";
+  backBtn.className = "back keycap";
+  backBtn.setAttribute("aria-label", "Back to Home");
+  backBtn.innerHTML = `${backSvg(16)}<span>Back</span>`;
+  backBtn.addEventListener("click", () => {
+    if (hasNavigated) history.back();
+    else location.hash = "#";
   });
 
-  // 2. Theme
+  const titleGroup = document.createElement("div");
+  titleGroup.className = "settings-page-title";
+  const h1 = document.createElement("h1");
+  h1.textContent = "Settings & Engines";
+  const sub = document.createElement("p");
+  sub.className = "settings-page-sub";
+  sub.textContent = "Drag engines to reorder dock priority. Customize appearance and data backup.";
+  titleGroup.append(h1, sub);
+
+  hero.append(backBtn, titleGroup);
+
+  const grid = document.createElement("div");
+  grid.className = "settings-page-grid";
+
+  // Section 1: Draggable Engine Reordering & Toggling
+  const secEngines = document.createElement("div");
+  secEngines.className = "settings-card";
+  const hEngine = document.createElement("h3");
+  hEngine.textContent = "Search Engines (Drag to Reorder)";
+  const pEngine = document.createElement("p");
+  pEngine.className = "setting-desc";
+  pEngine.textContent = "Drag any engine to adjust order in the dock. Uncheck to disable.";
+  secEngines.append(hEngine, pEngine);
+
+  const engineList = document.createElement("div");
+  engineList.className = "engine-sort-list";
+
+  function refreshEngineList() {
+    engineList.textContent = "";
+    const disabledSet = new Set(prefs.disabledEngines);
+
+    prefs.engines.forEach((k, idx) => {
+      const conf = ENGINES[k as keyof typeof ENGINES];
+      if (!conf) return;
+
+      const row = document.createElement("div");
+      row.className = "engine-sort-item";
+      row.draggable = true;
+
+      // Drag and drop event handlers
+      row.addEventListener("dragstart", (e) => {
+        e.dataTransfer?.setData("text/plain", `sort:${idx}`);
+        row.classList.add("dragging");
+      });
+      row.addEventListener("dragend", () => {
+        row.classList.remove("dragging");
+        engineList.querySelectorAll(".engine-sort-item").forEach((el) => el.classList.remove("drag-over"));
+      });
+      row.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        row.classList.add("drag-over");
+      });
+      row.addEventListener("dragleave", () => {
+        row.classList.remove("drag-over");
+      });
+      row.addEventListener("drop", (e) => {
+        e.preventDefault();
+        row.classList.remove("drag-over");
+        const data = e.dataTransfer?.getData("text/plain") || "";
+        if (data.startsWith("sort:")) {
+          const fromIdx = parseInt(data.slice(5), 10);
+          const toIdx = idx;
+          if (!isNaN(fromIdx) && fromIdx !== toIdx) {
+            const [moved] = prefs.engines.splice(fromIdx, 1);
+            prefs.engines.splice(toIdx, 0, moved!);
+            save();
+            renderDockEngines();
+            refreshEngineList();
+          }
+        }
+      });
+
+      // Drag handle icon
+      const handle = document.createElement("span");
+      handle.className = "engine-drag-handle";
+      handle.title = "Drag to reorder";
+      handle.innerHTML = dragHandleSvg(14);
+
+      // Checkbox
+      const label = document.createElement("label");
+      label.className = "engine-item-label";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !disabledSet.has(k);
+      cb.addEventListener("change", () => {
+        if (cb.checked) {
+          prefs.disabledEngines = prefs.disabledEngines.filter((x) => x !== k);
+        } else {
+          if (!prefs.disabledEngines.includes(k)) prefs.disabledEngines.push(k);
+        }
+        save();
+        renderDockEngines();
+      });
+      const iconSpan = document.createElement("span");
+      iconSpan.className = "engine-icon";
+      iconSpan.innerHTML = conf.svg(16);
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "engine-name";
+      nameSpan.textContent = conf.n;
+      label.append(cb, iconSpan, nameSpan);
+
+      // Reorder buttons [↑] [↓]
+      const orderBtns = document.createElement("div");
+      orderBtns.className = "engine-order-btns";
+
+      const btnUp = document.createElement("button");
+      btnUp.type = "button";
+      btnUp.className = "keycap btn-arrow";
+      btnUp.disabled = idx === 0;
+      btnUp.innerHTML = arrowUpSvg(12);
+      btnUp.setAttribute("aria-label", `Move ${conf.n} up`);
+      btnUp.addEventListener("click", () => {
+        if (idx > 0) {
+          const temp = prefs.engines[idx - 1]!;
+          prefs.engines[idx - 1] = prefs.engines[idx]!;
+          prefs.engines[idx] = temp;
+          save();
+          renderDockEngines();
+          refreshEngineList();
+        }
+      });
+
+      const btnDown = document.createElement("button");
+      btnDown.type = "button";
+      btnDown.className = "keycap btn-arrow";
+      btnDown.disabled = idx === prefs.engines.length - 1;
+      btnDown.innerHTML = arrowDownSvg(12);
+      btnDown.setAttribute("aria-label", `Move ${conf.n} down`);
+      btnDown.addEventListener("click", () => {
+        if (idx < prefs.engines.length - 1) {
+          const temp = prefs.engines[idx + 1]!;
+          prefs.engines[idx + 1] = prefs.engines[idx]!;
+          prefs.engines[idx] = temp;
+          save();
+          renderDockEngines();
+          refreshEngineList();
+        }
+      });
+
+      orderBtns.append(btnUp, btnDown);
+      row.append(handle, label, orderBtns);
+      engineList.append(row);
+    });
+  }
+
+  refreshEngineList();
+  secEngines.append(engineList);
+
+  // Section 2: General Preferences
+  const secPrefs = document.createElement("div");
+  secPrefs.className = "settings-card";
+  const hPrefs = document.createElement("h3");
+  hPrefs.textContent = "Preferences";
+  secPrefs.append(hPrefs);
+
+  // Appearance
   const rowTheme = document.createElement("div");
   rowTheme.className = "setting-row";
   const infoTheme = document.createElement("div");
   infoTheme.className = "setting-info";
-  const spanTheme = document.createElement("span");
-  spanTheme.textContent = "Appearance";
-  const pTheme = document.createElement("p");
-  pTheme.textContent = "Theme selection";
-  infoTheme.append(spanTheme, pTheme);
+  infoTheme.innerHTML = "<span>Appearance</span><p>Theme selection</p>";
   const themeBtns = document.createElement("div");
   themeBtns.className = "theme-btns";
   (["system", "light", "dark"] as Theme[]).forEach((t) => {
@@ -735,80 +944,71 @@ function getSettingsDialog(): HTMLDialogElement {
   });
   rowTheme.append(infoTheme, themeBtns);
 
-  // Starred-only filter (moved in from the old home-page chip)
+  // New tab
+  const rowNewTab = document.createElement("div");
+  rowNewTab.className = "setting-row";
+  rowNewTab.innerHTML = "<div class=\"setting-info\"><span>Open links in new tab</span><p>Keep Seaxch open</p></div>";
+  const cbNewTab = document.createElement("input");
+  cbNewTab.type = "checkbox";
+  cbNewTab.className = "switch";
+  cbNewTab.checked = prefs.newTab;
+  cbNewTab.setAttribute("aria-label", "Open links in new tab");
+  cbNewTab.addEventListener("change", () => {
+    prefs.newTab = cbNewTab.checked;
+    save();
+  });
+  rowNewTab.append(cbNewTab);
+
+  // Starred only
   const rowStar = document.createElement("div");
   rowStar.className = "setting-row";
-  const infoStar = document.createElement("div");
-  infoStar.className = "setting-info";
-  const spanStar = document.createElement("span");
-  spanStar.textContent = "Starred only";
-  const pStar = document.createElement("p");
-  pStar.textContent = "Only show FMHY-starred links";
-  infoStar.append(spanStar, pStar);
+  rowStar.innerHTML = "<div class=\"setting-info\"><span>Starred only</span><p>Only show FMHY-starred links</p></div>";
   const cbStar = document.createElement("input");
   cbStar.type = "checkbox";
   cbStar.className = "switch";
-  cbStar.setAttribute("role", "switch");
-  cbStar.id = "pref-star";
   cbStar.checked = prefs.star;
+  cbStar.setAttribute("aria-label", "Starred only");
   cbStar.addEventListener("change", () => {
     prefs.star = cbStar.checked;
     save();
     document.dispatchEvent(new CustomEvent("fh:prefs"));
   });
-  rowStar.append(infoStar, cbStar);
-  rowStar.style.cursor = "pointer";
-  rowStar.addEventListener("click", (e) => {
-    if (e.target === cbStar) return;
-    cbStar.checked = !cbStar.checked;
-    cbStar.dispatchEvent(new Event("change"));
-  });
-  body.append(rowNewTab, rowTheme, rowStar);
+  rowStar.append(cbStar);
 
-  // 3. NSFW (if nsfw checkbox exists in page)
+  secPrefs.append(rowTheme, rowNewTab, rowStar);
+
+  // NSFW if enabled
   const mainBox = document.getElementById("nsfw") as HTMLInputElement | null;
   if (mainBox) {
     const rowNsfw = document.createElement("div");
     rowNsfw.className = "setting-row";
-    const infoNsfw = document.createElement("div");
-    infoNsfw.className = "setting-info";
-    const spanNsfw = document.createElement("span");
-    spanNsfw.textContent = "Show NSFW content";
-    const pNsfw = document.createElement("p");
-    pNsfw.textContent = "Include adult link directory";
-    infoNsfw.append(spanNsfw, pNsfw);
+    rowNsfw.innerHTML = "<div class=\"setting-info\"><span>Show NSFW content</span><p>Include adult directory</p></div>";
     const cbNsfw = document.createElement("input");
     cbNsfw.type = "checkbox";
     cbNsfw.className = "switch";
-    cbNsfw.setAttribute("role", "switch");
-    cbNsfw.id = "pref-nsfw";
     cbNsfw.checked = prefs.nsfw;
+    cbNsfw.setAttribute("aria-label", "Show NSFW content");
     cbNsfw.addEventListener("change", () => {
       prefs.nsfw = cbNsfw.checked;
       mainBox.checked = prefs.nsfw;
       save();
       document.dispatchEvent(new CustomEvent("fh:prefs"));
     });
-    rowNsfw.append(infoNsfw, cbNsfw);
-    rowNsfw.style.cursor = "pointer";
-    rowNsfw.addEventListener("click", (e) => {
-      if (e.target === cbNsfw) return;
-      cbNsfw.checked = !cbNsfw.checked;
-      cbNsfw.dispatchEvent(new Event("change"));
-    });
-    body.append(rowNsfw);
+    rowNsfw.append(cbNsfw);
+    secPrefs.append(rowNsfw);
   }
 
-  // 4. Export / Import pins
+  // Section 3: Data & Pins
+  const secData = document.createElement("div");
+  secData.className = "settings-card";
+  const hData = document.createElement("h3");
+  hData.textContent = "Data & History";
+  secData.append(hData);
+
+  // Backup Pins
   const rowPins = document.createElement("div");
   rowPins.className = "setting-row";
-  const infoPins = document.createElement("div");
-  infoPins.className = "setting-info";
-  const spanPins = document.createElement("span");
-  spanPins.textContent = "Backup Pins";
-  const pPins = document.createElement("p");
-  pPins.textContent = "Export or import your pins";
-  infoPins.append(spanPins, pPins);
+  rowPins.innerHTML = "<div class=\"setting-info\"><span>Backup Pins</span><p>Export or import your saved pins</p></div>";
   const actionsPins = document.createElement("div");
   actionsPins.className = "setting-actions";
   const btnExport = document.createElement("button");
@@ -820,7 +1020,7 @@ function getSettingsDialog(): HTMLDialogElement {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "fmhy-pins.json";
+    a.download = "seaxch-pins.json";
     a.click();
     URL.revokeObjectURL(url);
     showToast("Pins exported!");
@@ -843,7 +1043,6 @@ function getSettingsDialog(): HTMLDialogElement {
         renderPins(pinsEl);
         document.dispatchEvent(new CustomEvent("fh:pins"));
         showToast("Pins imported successfully!");
-        dlg!.close();
       } else {
         showToast("Invalid pins JSON file format.");
       }
@@ -854,19 +1053,12 @@ function getSettingsDialog(): HTMLDialogElement {
   });
   labelImport.append(fileImport);
   actionsPins.append(btnExport, labelImport);
-  rowPins.append(infoPins, actionsPins);
-  body.append(rowPins);
+  rowPins.append(actionsPins);
 
-  // 5. Clear recents
+  // Clear recents
   const rowRecents = document.createElement("div");
   rowRecents.className = "setting-row";
-  const infoRecents = document.createElement("div");
-  infoRecents.className = "setting-info";
-  const spanRecents = document.createElement("span");
-  spanRecents.textContent = "Recent links";
-  const pRecents = document.createElement("p");
-  pRecents.textContent = "Clear visited history";
-  infoRecents.append(spanRecents, pRecents);
+  rowRecents.innerHTML = "<div class=\"setting-info\"><span>Recent history</span><p>Clear visited link history</p></div>";
   const btnClearR = document.createElement("button");
   btnClearR.type = "button";
   btnClearR.className = "keycap btn-sec";
@@ -875,16 +1067,17 @@ function getSettingsDialog(): HTMLDialogElement {
     clearRecents();
     showToast("Recent history cleared");
   });
-  rowRecents.append(infoRecents, btnClearR);
-  body.append(rowRecents);
+  rowRecents.append(btnClearR);
 
-  dlg.append(header, body);
-  dlg.addEventListener("click", (e) => {
-    if (e.target === dlg) dlg!.close();
-  });
-  document.body.append(dlg);
-  return dlg;
+  secData.append(rowPins, rowRecents);
+
+  grid.append(secEngines, secPrefs, secData);
+  container.append(hero, grid);
 }
+
+document.addEventListener("fh:open-settings", () => {
+  location.hash = "#settings";
+});
 
 function getShortcutsDialog(): HTMLDialogElement {
   let dlg = document.getElementById("shortcuts-dlg") as HTMLDialogElement | null;
@@ -937,10 +1130,6 @@ function getShortcutsDialog(): HTMLDialogElement {
   return dlg;
 }
 
-document.addEventListener("fh:open-settings", () => {
-  const dlg = getSettingsDialog();
-  if (!dlg.open) dlg.showModal();
-});
 document.addEventListener("fh:open-shortcuts", () => {
   const dlg = getShortcutsDialog();
   if (!dlg.open) dlg.showModal();
@@ -948,6 +1137,7 @@ document.addEventListener("fh:open-shortcuts", () => {
 
 // ---------- boot ----------
 async function boot() {
+  renderDockEngines();
   try {
     seed = await loadSeed();
   } catch {

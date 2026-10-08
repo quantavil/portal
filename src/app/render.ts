@@ -91,12 +91,6 @@ export function rowEl(r: Row, o: { also?: Row[]; where?: boolean } = {}): HTMLLI
     m.append(w);
   }
 
-  const enter = el("span", "kc-enter");
-  enter.setAttribute("aria-hidden", "true");
-  const kbd = document.createElement("kbd");
-  kbd.textContent = "\u21b5";
-  enter.append(kbd);
-
-  li.append(m, enter, pinButton(r.u, r.n));
+  li.append(m, pinButton(r.u, r.n));
   return li;
 }

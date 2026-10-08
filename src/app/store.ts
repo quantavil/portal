@@ -3,6 +3,8 @@ type Pin = [url: string, name: string, clicks: number];
 type Recent = [url: string, name: string, host: string, time: number];
 export type Theme = "system" | "light" | "dark";
 
+const DEFAULT_ENGINES = ["y", "g", "a", "d", "gh", "w", "r"];
+
 export type Prefs = {
   pins: Pin[];
   nsfw: boolean;
@@ -10,6 +12,8 @@ export type Prefs = {
   newTab: boolean;
   theme: Theme;
   recents: Recent[];
+  engines: string[];
+  disabledEngines: string[];
 };
 
 const KEY = "fh1";
@@ -22,6 +26,8 @@ function read(): Prefs {
     newTab: true,
     theme: "system",
     recents: [],
+    engines: [...DEFAULT_ENGINES],
+    disabledEngines: [],
   };
   try {
     const o = JSON.parse(localStorage.getItem(KEY) || "{}");
@@ -38,6 +44,20 @@ function read(): Prefs {
       p.recents = o.recents
         .filter((x: unknown): x is Recent => Array.isArray(x) && typeof x[0] === "string" && typeof x[1] === "string")
         .slice(0, 10);
+    }
+    if (Array.isArray(o.engines)) {
+      const valid = o.engines.filter((x: unknown) => typeof x === "string");
+      if (valid.length) {
+        // ensure all DEFAULT_ENGINES exist
+        const set = new Set(valid);
+        for (const e of DEFAULT_ENGINES) {
+          if (!set.has(e)) valid.push(e);
+        }
+        p.engines = valid;
+      }
+    }
+    if (Array.isArray(o.disabledEngines)) {
+      p.disabledEngines = o.disabledEngines.filter((x: unknown): x is string => typeof x === "string");
     }
   } catch {
     /* first run, blocked storage, or corrupt value: start empty */
@@ -58,6 +78,8 @@ export function save(): void {
         newTab: prefs.newTab ? 1 : 0,
         theme: prefs.theme,
         recents: prefs.recents,
+        engines: prefs.engines,
+        disabledEngines: prefs.disabledEngines,
       }),
     );
   } catch {

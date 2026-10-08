@@ -91,7 +91,35 @@ $("btn-shortcuts")?.addEventListener("click", () => {
 // Focus search only where keyboard is primary input
 if (matchMedia("(hover: hover) and (pointer: fine)").matches) q.focus({ preventScroll: true });
 
+// Dock external engine dispatching via delegation (supports dynamic reordering & toggling)
+let justDragged = false;
+document.addEventListener("dragstart", () => { justDragged = true; });
+document.addEventListener("dragend", () => { setTimeout(() => { justDragged = false; }, 80); });
+
+document.addEventListener("click", (e) => {
+  if (justDragged) return;
+  const btn = (e.target as HTMLElement).closest<HTMLElement>(".dock-chip");
+  if (!btn) return;
+  const eng = btn.dataset.engine;
+  const term = q.value.trim();
+  const map: Record<string, (s: string) => string> = {
+    y: (s) => (s ? `https://yandex.com/search/?text=${encodeURIComponent(s)}` : "https://yandex.com"),
+    g: (s) => (s ? `https://www.google.com/search?q=${encodeURIComponent(s)}` : "https://www.google.com"),
+    a: (s) => (s ? `https://www.google.com/search?udm=50&q=${encodeURIComponent(s)}` : "https://www.google.com/search?udm=50"),
+    d: (s) => (s ? `https://duckduckgo.com/?q=${encodeURIComponent(s)}` : "https://duckduckgo.com"),
+    gh: (s) => (s ? `https://github.com/search?q=${encodeURIComponent(s)}` : "https://github.com"),
+    w: (s) => (s ? `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(s)}` : "https://en.wikipedia.org"),
+    r: (s) => (s ? `https://www.reddit.com/r/piracy/search/?q=${encodeURIComponent(s)}` : "https://www.reddit.com/r/piracy"),
+  };
+  if (eng && map[eng]) {
+    const url = map[eng](term);
+    if (prefs.newTab) window.open(url, "_blank", "noopener,noreferrer");
+    else location.assign(url);
+  }
+});
+
 addEventListener("load", () => {
   (window.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 300)))(() => void loadCore());
   if ("serviceWorker" in navigator) navigator.serviceWorker.register(__SW__).catch(() => {});
 });
+
