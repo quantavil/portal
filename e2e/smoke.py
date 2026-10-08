@@ -37,7 +37,7 @@ with sync_playwright() as p:
         if w < 640:
             check(f"{name}: search bar stays near the top", box["y"] < 240, str(box))
             cols = pg.evaluate("getComputedStyle(document.querySelector('.cats')).gridTemplateColumns.split(' ').length")
-            check(f"{name}: categories are one column", cols == 1, cols)
+            check(f"{name}: categories are 2 columns", cols == 2, cols)
         else:
             check(f"{name}: search bar centered below the introduction", box["y"] < 260 and abs(box["x"] + box["width"] / 2 - w / 2) < 3, str(box))
         tl = pg.locator(".tl").first.bounding_box()

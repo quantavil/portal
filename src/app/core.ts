@@ -116,9 +116,6 @@ function rebuild() {
   const all = nsfwPage ? [...pages.filter((p) => !p.nsfw), nsfwPage] : pages.filter((p) => !p.nsfw);
   pages = all;
   ix = buildIndex(toRows(pages));
-  const unique = new Set<string>();
-  for (const r of ix.rows) if (!r.ns) unique.add(r.k);
-  q.placeholder = `Search ${fmt(unique.size)} links`;
   for (const p of pages) {
     const tile = document.getElementById("t-" + p.k);
     if (tile) tile.querySelector("i")!.textContent = fmt(countOf(p));
@@ -330,10 +327,12 @@ function showView(p: PageData) {
     filterCat("");
     catInput.focus();
   });
+  let filterTimer = 0;
   catInput.addEventListener("input", () => {
     const val = catInput.value.trim().toLowerCase();
     catClr.hidden = !catInput.value;
-    filterCat(val);
+    clearTimeout(filterTimer);
+    filterTimer = window.setTimeout(() => filterCat(val), 50);
   });
   catInput.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
@@ -345,37 +344,6 @@ function showView(p: PageData) {
 
   searchBox.append(searchIconSvg(), catInput, catClr);
   hero.append(heroTop, searchBox);
-
-  // Top picks strip
-  const starredInCat: Row[] = [];
-  for (const s of p.s) {
-    for (const e of s.e) if (e[3] & F_STAR) starredInCat.push(entryRow(e, p, s.n, ""));
-    for (const b of s.b) for (const e of b.e) if (e[3] & F_STAR) starredInCat.push(entryRow(e, p, s.n, b.n));
-  }
-  let topPicksWrap: HTMLElement | null = null;
-  if (starredInCat.length > 0) {
-    topPicksWrap = document.createElement("div");
-    topPicksWrap.className = "cat-top-picks";
-    const tpH3 = document.createElement("h3");
-    tpH3.textContent = "Top Picks";
-    const tpStrip = document.createElement("div");
-    tpStrip.className = "top-picks-strip";
-    for (const r of starredInCat.slice(0, 8)) {
-      const card = document.createElement("div");
-      card.className = "today-card top-pick-card keycap";
-      const info = document.createElement("div");
-      info.className = "t";
-      const a = link(r.u, r.n, "n");
-      a.dir = "auto";
-      const ho = document.createElement("span");
-      ho.className = "ho";
-      ho.textContent = r.h;
-      info.append(a, ho);
-      card.append(info, pinButton(r.u, r.n));
-      tpStrip.append(card);
-    }
-    topPicksWrap.append(tpH3, tpStrip);
-  }
 
   // Mobile horizontal section chips
   const secChips = document.createElement("nav");
@@ -435,27 +403,30 @@ function showView(p: PageData) {
   catLayout.className = "cat-layout";
   catLayout.append(rail, content);
 
+  // Pre-index rows for blazing fast (<5ms) in-category filtering
+  const secCaches = secEls.map((s) => {
+    const countEl = s.querySelector(".cat-sec-count");
+    const idx = +(s.id.replace("sec-", "") || "0");
+    const orig = p.s[idx];
+    const origCount = orig ? orig.e.length + orig.b.reduce((m, b) => m + b.e.length, 0) : 0;
+    const rows = Array.from(s.querySelectorAll<HTMLElement>(".r")).map((r) => ({
+      el: r,
+      text: (r.textContent || "").toLowerCase(),
+    }));
+    return { s, countEl, origCount, rows };
+  });
+
   function filterCat(qStr: string) {
-    for (const s of secEls) {
+    for (const sc of secCaches) {
       let visible = 0;
-      const rows = s.querySelectorAll<HTMLElement>(".r");
-      for (const r of rows) {
-        if (!qStr) {
-          r.hidden = false;
-          visible++;
-        } else {
-          const match = (r.textContent || "").toLowerCase().includes(qStr);
-          r.hidden = !match;
-          if (match) visible++;
-        }
+      for (const r of sc.rows) {
+        const match = !qStr || r.text.includes(qStr);
+        r.el.hidden = !match;
+        if (match) visible++;
       }
-      s.hidden = visible === 0;
-      const countEl = s.querySelector(".cat-sec-count");
-      if (countEl && qStr) countEl.textContent = fmt(visible);
-      else if (countEl) {
-        const idx = +(s.id.replace("sec-", "") || "0");
-        const orig = p.s[idx];
-        if (orig) countEl.textContent = fmt(orig.e.length + orig.b.reduce((m, b) => m + b.e.length, 0));
+      sc.s.hidden = visible === 0;
+      if (sc.countEl) {
+        sc.countEl.textContent = fmt(qStr ? visible : sc.origCount);
       }
     }
   }
@@ -475,9 +446,7 @@ function showView(p: PageData) {
     for (const s of secEls) obs.observe(s);
   }
 
-  const elements: HTMLElement[] = [topBar, hero];
-  if (topPicksWrap) elements.push(topPicksWrap);
-  elements.push(secChips, catLayout);
+  const elements: HTMLElement[] = [topBar, hero, secChips, catLayout];
   view.replaceChildren(...elements);
   scrollTo(0, 0);
 
@@ -493,6 +462,7 @@ function showView(p: PageData) {
 function route() {
   if (!ready) return;
   const term = q.value.trim();
+  document.body.classList.toggle("q", !!term);
   clr.hidden = !q.value;
   const key = decodeURIComponent(location.hash.slice(1).split("?")[0] || "");
   const page = vis().find((p) => p.k === key);

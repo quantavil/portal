@@ -20,7 +20,7 @@ function chunk(type: string, data: Uint8Array): Buffer {
   out.writeUInt32BE(crc32(out.subarray(4, 8 + data.length)), 8 + data.length);
   return out;
 }
-export function encodePng(w: number, h: number, rgba: Uint8Array): Buffer {
+function encodePng(w: number, h: number, rgba: Uint8Array): Buffer {
   const raw = Buffer.alloc((w * 4 + 1) * h);
   for (let y = 0; y < h; y++) raw.set(rgba.subarray(y * w * 4, (y + 1) * w * 4), y * (w * 4 + 1) + 1);
   const ihdr = Buffer.alloc(13);

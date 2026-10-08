@@ -36,19 +36,8 @@ pins.addEventListener("click", (e) => {
     });
     return;
   }
-  const sc = t.closest<HTMLElement>(".starter-chip");
-  if (sc) {
+  if (pins.classList.contains("edit")) {
     e.preventDefault();
-    const u = sc.dataset.u!;
-    const n = sc.dataset.n!;
-    togglePin(u, n);
-    renderPins(pins);
-    document.dispatchEvent(new CustomEvent("fh:pins"));
-    showToast(`Pinned ${n}`, () => {
-      togglePin(u, n);
-      renderPins(pins);
-      document.dispatchEvent(new CustomEvent("fh:pins"));
-    });
     return;
   }
   const a = t.closest<HTMLAnchorElement>("a.pin");
@@ -87,6 +76,7 @@ let core: Promise<unknown> | undefined;
 const loadCore = () => (core ??= import("./core"));
 q.addEventListener("focus", loadCore, { once: true });
 q.addEventListener("input", loadCore, { once: true });
+q.addEventListener("input", () => document.body.classList.toggle("q", !!q.value.trim()));
 addEventListener("hashchange", loadCore);
 if (location.hash.length > 1) loadCore();
 

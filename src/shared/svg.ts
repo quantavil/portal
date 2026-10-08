@@ -17,8 +17,10 @@ export const starSvg = (size: number): string =>
 export const copySvg = (size: number): string =>
   wrap(size, '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>');
 
-export const PIN_SVG =
-  '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.3"/></svg>';
+export const PIN_SVG = wrap(
+  15,
+  '<line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>',
+);
 
 export const FAVICON_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#0f1620"/><circle cx="14" cy="14" r="6.5" fill="none" stroke="#e6edf5" stroke-width="2.6"/><path d="M19 19l6 6" stroke="#79a6ff" stroke-width="3" stroke-linecap="round"/></svg>';

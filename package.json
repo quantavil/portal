@@ -13,6 +13,7 @@
     "dev": "bun scripts/serve.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
+    "knip": "knip",
     "check:live": "bun scripts/check-live.ts"
   },
   "dependencies": {

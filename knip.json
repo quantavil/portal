@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "scripts/*.ts",
+    "src/app/main.ts",
+    "src/app/updater.ts",
+    "src/app/core.ts",
+    "src/app/sw.ts",
+    "test/**/*.test.ts"
+  ],
+  "project": [
+    "src/**/*.ts",
+    "scripts/*.ts",
+    "test/**/*.ts"
+  ],
+  "ignoreDependencies": [
+    "@biomejs/biome"
+  ]
+}

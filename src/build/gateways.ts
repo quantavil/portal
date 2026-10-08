@@ -1,7 +1,7 @@
 import type { GatewayMap } from "../shared/gateways";
 
 export const GATEWAY_SOURCE = "https://rentry.co/FMHYB64";
-export const UA = "fmhy-home-build/1.0 (+personal start page)";
+const UA = "fmhy-home-build/1.0 (+personal start page)";
 
 /** Port of the owner's Python `decode_base64_destination`: up to 3 nested Base64 layers, URL-safe alphabet allowed. */
 export function decodeBase64Destination(value: string): string | null {

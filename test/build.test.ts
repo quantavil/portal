@@ -88,6 +88,20 @@ describe("build output", () => {
     expect(files.some((f) => f.startsWith("nsfw."))).toBe(false);
     expect(await Bun.file(join(dir, "index.html")).text()).not.toContain('id="nsfw"');
   }, 60_000);
+  test("pinned section is wrapped in pins-sec and hidden by default", async () => {
+    const html = await read("index.html");
+    expect(html).toContain('<div id="pins-sec" class="pins-sec" hidden>');
+    expect(html).not.toContain("starter-box");
+  });
+  test("footer text is shortened and attribution preserved", async () => {
+    const html = await read("index.html");
+    expect(html).toContain('Curated by <a href="https://fmhy.net" rel="noopener noreferrer">FMHY</a> · Synced <span id="sync">at build time</span>');
+    expect(html).not.toContain("Links curated by");
+  });
+  test("shortcuts button is hidden on touch devices via media query", async () => {
+    const html = await read("index.html");
+    expect(html).toContain("#btn-shortcuts{display:none!important}");
+  });
   test("build refuses to ship when the parser invariant fails (a page with no entries)", async () => {
     await Bun.write(join(tmp, "docs", "ai.md"), "nothing useful here\n");
     const r = await build(["--no-nsfw"], join(tmp, "dist3"));

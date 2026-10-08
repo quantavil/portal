@@ -17,7 +17,7 @@ import { codeBlocks, decodeBase64Destination, fetchText, unescapeHtml } from "./
  * Callers must treat any failure as non-fatal and keep the last good snapshot.
  */
 
-export const NSFW_CHECKPOINT = "https://rentry.org/NSFW-Checkpoint";
+const NSFW_CHECKPOINT = "https://rentry.org/NSFW-Checkpoint";
 const PRIVATEBIN_HOSTS = new Set(["paste.to", "privatebin.net"]);
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 

@@ -1,6 +1,6 @@
 /** Synchronous per-browser preferences. One localStorage key, always wrapped: storage can be blocked or full. */
-export type Pin = [url: string, name: string, clicks: number];
-export type Recent = [url: string, name: string, host: string, time: number];
+type Pin = [url: string, name: string, clicks: number];
+type Recent = [url: string, name: string, host: string, time: number];
 export type Theme = "system" | "light" | "dark";
 
 export type Prefs = {

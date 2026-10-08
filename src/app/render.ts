@@ -54,8 +54,8 @@ export function rowEl(r: Row, o: { also?: Row[]; where?: boolean } = {}): HTMLLI
   const t = el("div", "t");
   const a = link(r.u, r.n, "n");
   a.dir = "auto";
+  if (r.h) a.title = r.h;
   t.append(a);
-  if (r.h) t.append(el("span", "ho", r.h));
   if (r.f & F_STAR) {
     const star = el("span", "s");
     star.title = "Starred by FMHY";

@@ -4,14 +4,6 @@ import { prefs, save } from "./store";
 const find = (url: string) => prefs.pins.findIndex((p) => canon(p[0]) === canon(url));
 export const isPinned = (url: string) => find(url) >= 0;
 
-export const STARTER_PINS: [url: string, name: string][] = [
-  ["https://ublockorigin.com/", "uBlock Origin"],
-  ["https://annas-archive.org/", "Anna's Archive"],
-  ["https://freetubeapp.io/", "FreeTube"],
-  ["https://archive.org/", "Internet Archive"],
-  ["https://fmhy.net/", "FMHY Wiki"],
-];
-
 export function togglePin(url: string, name: string): boolean {
   const i = find(url);
   if (i >= 0) prefs.pins.splice(i, 1);
@@ -30,43 +22,17 @@ export function bump(url: string): void {
 /** Pins ranked by clicks (stable for ties). Re-ranked only on load, so tiles never jump under your cursor. */
 export function renderPins(el: HTMLElement): void {
   el.textContent = "";
+  const sec = document.getElementById("pins-sec");
   const edit = document.getElementById("edit");
-  if (edit) edit.hidden = !prefs.pins.length;
-  if (!prefs.pins.length) {
+  const count = prefs.pins.length;
+  if (sec) sec.hidden = count === 0;
+  if (edit) edit.hidden = count === 0;
+  if (!count) {
     el.classList.remove("edit");
     if (edit) edit.textContent = "Edit";
-  }
-  const ranked = prefs.pins.map((p, i) => ({ p, i })).sort((a, b) => b.p[2] - a.p[2] || a.i - b.i);
-  if (!ranked.length) {
-    const hint = document.createElement("p");
-    hint.className = "hint";
-    hint.textContent = "Pin a site with the pin button on any result. Pins stay in this browser.";
-
-    const starters = document.createElement("div");
-    starters.className = "starter-box";
-    const lbl = document.createElement("span");
-    lbl.className = "starter-lbl";
-    lbl.textContent = "Quick Starter Pins:";
-    const chips = document.createElement("div");
-    chips.className = "starter-chips";
-
-    for (const [u, n] of STARTER_PINS) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "starter-chip keycap";
-      btn.dataset.u = u;
-      btn.dataset.n = n;
-      const txt = document.createElement("span");
-      txt.className = "starter-txt";
-      txt.textContent = `+ ${n}`;
-      btn.append(txt);
-      chips.append(btn);
-    }
-
-    starters.append(lbl, chips);
-    el.append(hint, starters);
     return;
   }
+  const ranked = prefs.pins.map((p, i) => ({ p, i })).sort((a, b) => b.p[2] - a.p[2] || a.i - b.i);
   for (const { p } of ranked) {
     const a = document.createElement("a");
     a.className = "pin keycap";

@@ -33,7 +33,7 @@ export function sourceHash(text: string): string {
   return hash(text.replace(/^\ufeff/, "").replace(/\r\n/g, "\n"));
 }
 
-export function clean(s: string): string {
+function clean(s: string): string {
   return s
     .replace(INVISIBLE, "")
     .replace(HTML_TAG, "")
