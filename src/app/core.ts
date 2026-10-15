@@ -270,10 +270,44 @@ type SubGroup = { subLi: HTMLElement; subText: string; rows: RowItem[] };
 type SecData = {
   sec: HTMLElement;
   countEl: HTMLElement;
+  toggleEl: HTMLElement;
+  /** every <li> in the list, in order: rows and sub-headers, for the fold */
+  items: HTMLElement[];
   origCount: number;
+  /** user asked for the whole section (remembered for the visit) */
+  expanded: boolean;
+  /** a filter is running: fold is suspended so hits are never hidden */
+  forced: boolean;
   direct: RowItem[];
   subs: SubGroup[];
 };
+
+/** Rows kept visible in a collapsed section. A 380-link category is ~47 screens of
+ *  scrolling on a phone; this folds it to ~10 while every section stays reachable. */
+const COLLAPSE_N = 12;
+
+/** Sections the reader opened themselves — they stay open for the rest of the visit. */
+const expandedSecs = new Set<string>();
+
+function syncSec(sc: SecData): void {
+  const open = sc.expanded || sc.forced;
+  let seen = 0;
+  for (const li of sc.items) {
+    const isRow = li.classList.contains("r");
+    if (isRow) seen++;
+    // a sub-header folds once the cut is reached, so none can survive without rows
+    li.classList.toggle("over", !open && (isRow ? seen > COLLAPSE_N : seen >= COLLAPSE_N));
+  }
+  sc.sec.classList.toggle("open", open);
+  const foldable = sc.origCount > COLLAPSE_N;
+  sc.toggleEl.hidden = !foldable || sc.forced;
+  if (foldable) {
+    sc.toggleEl.textContent = open ? "Show less" : `Show all ${fmt(sc.origCount)}`;
+    sc.toggleEl.setAttribute("aria-expanded", String(open));
+    sc.toggleEl.setAttribute("aria-label", open ? `Collapse ${sc.countEl.dataset.name ?? "section"}` : `Show all ${sc.origCount} links`);
+  }
+  if (!sc.forced) sc.countEl.textContent = fmt(open ? sc.origCount : Math.min(sc.origCount, COLLAPSE_N));
+}
 
 function sectionEl(p: PageData, s: PageData["s"][number], idx: number): SecData | null {
   const keep = (e: { 3: number }) => !prefs.star || !!(e[3] & F_STAR);
@@ -296,7 +330,14 @@ function sectionEl(p: PageData, s: PageData["s"][number], idx: number): SecData 
   const count = document.createElement("span");
   count.className = "cat-sec-count";
   count.textContent = fmt(n);
+  count.dataset.name = s.n;
   left.append(h3, count);
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "cat-sec-toggle";
+  toggle.hidden = true;
+  left.append(toggle);
 
   const copyBtn = document.createElement("button");
   copyBtn.type = "button";
@@ -337,7 +378,25 @@ function sectionEl(p: PageData, s: PageData["s"][number], idx: number): SecData 
   }
 
   sec.append(hdr, ol);
-  return { sec, countEl: count, origCount: n, direct: directRows, subs: subGroups };
+  const data: SecData = {
+    sec,
+    countEl: count,
+    toggleEl: toggle,
+    items: [...ol.children] as HTMLElement[],
+    origCount: n,
+    expanded: expandedSecs.has(sec.id),
+    forced: false,
+    direct: directRows,
+    subs: subGroups,
+  };
+  toggle.addEventListener("click", () => {
+    data.expanded = !data.expanded;
+    if (data.expanded) expandedSecs.add(sec.id);
+    else expandedSecs.delete(sec.id);
+    syncSec(data);
+  });
+  syncSec(data);
+  return data;
 }
 
 function showView(p: PageData) {
@@ -493,6 +552,11 @@ function showView(p: PageData) {
   function filterCat(qStr: string) {
     const terms = qStr.trim().toLowerCase().split(/\s+/).filter(Boolean);
     for (const sc of secDataList) {
+      // a filter must never leave a hit hidden behind the fold
+      if (sc.forced !== terms.length > 0) {
+        sc.forced = terms.length > 0;
+        syncSec(sc);
+      }
       let visible = 0;
       for (const r of sc.direct) {
         const match = !terms.length || terms.every((t) => r.text.includes(t));
@@ -515,8 +579,11 @@ function showView(p: PageData) {
       }
       const hideSec = visible === 0;
       if (sc.sec.hidden !== hideSec) sc.sec.hidden = hideSec;
-      const txt = fmt(terms.length ? visible : sc.origCount);
-      if (sc.countEl.textContent !== txt) sc.countEl.textContent = txt;
+      // while folded, syncSec owns the badge (it shows how many are actually visible)
+      if (terms.length) {
+        const txt = fmt(visible);
+        if (sc.countEl.textContent !== txt) sc.countEl.textContent = txt;
+      }
     }
   }
 
@@ -525,16 +592,25 @@ function showView(p: PageData) {
     catObs = null;
   }
   if ("IntersectionObserver" in window) {
-    const railItems = rail.querySelectorAll(".cat-rail-item");
+    const railItems = rail.querySelectorAll<HTMLElement>(".cat-rail-item");
+    const chipItems = secChips.querySelectorAll<HTMLElement>(".sec-chip");
+    const markActive = (id: string) => {
+      for (const it of railItems) it.classList.toggle("active", it.dataset.target === id);
+      chipItems.forEach((c, i) => {
+        const on = secDataList[i]?.sec.id === id;
+        c.classList.toggle("active", on);
+        // keep the active chip visible in the horizontal strip. Scroll the strip
+        // itself, never scrollIntoView — that would also scroll the page.
+        if (on) {
+          const target = c.offsetLeft - (secChips.clientWidth - c.offsetWidth) / 2;
+          secChips.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+        }
+      });
+    };
     catObs = new IntersectionObserver((entries) => {
       if (catInput.value.trim()) return;
       for (const ent of entries) {
-        if (ent.isIntersecting) {
-          const id = ent.target.id;
-          for (const it of railItems) {
-            it.classList.toggle("active", (it as HTMLElement).dataset.target === id);
-          }
-        }
+        if (ent.isIntersecting) markActive(ent.target.id);
       }
     }, { rootMargin: "-10% 0px -70% 0px" });
     for (const s of secEls) catObs.observe(s);

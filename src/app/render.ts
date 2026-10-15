@@ -27,6 +27,12 @@ function link(url: string, text: string, cls: string): HTMLAnchorElement {
   return a;
 }
 
+/** Registrable-ish host: `fmy.github.io` -> `github.io`, `hub.com` stays. */
+function shortHost(host: string): string {
+  const p = host.split(".");
+  return p.length > 2 ? p.slice(-2).join(".") : host;
+}
+
 // static markup only; nothing from the dataset ever goes through innerHTML
 const PIN = PIN_SVG;
 
@@ -63,6 +69,9 @@ export function rowEl(r: Row, o: { also?: Row[]; where?: boolean } = {}): HTMLLI
     star.innerHTML = starSvg(12);
     t.append(star);
   }
+  // touch devices get no tooltip and no browser status bubble, so the destination
+  // has to be visible; margin-left:auto pins it to the right of the title row
+  if (r.h) t.append(el("span", "host", shortHost(r.h)));
   m.append(t);
 
   if (r.d) {

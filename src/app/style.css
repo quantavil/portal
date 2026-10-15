@@ -5,7 +5,10 @@
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100dvh;background:var(--bg);color:var(--fg);font-family:var(--font-body);padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-tap-highlight-color:transparent}
-main{max-width:72rem;margin:0 auto;padding:0 1.25rem 2rem;overflow-x:hidden}
+/* `clip`, not `hidden`: `overflow-x:hidden` forces the y axis to `auto`, which turns
+   main into a scroll container and silently kills every position:sticky inside it
+   (the section jump strip and the section headers all stopped sticking). */
+main{max-width:72rem;margin:0 auto;padding:0 1.25rem 2rem;overflow-x:clip}
 a{color:inherit;text-decoration:none}
 button,input,optgroup,select,textarea{font-family:inherit;font-size:inherit;line-height:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px}
@@ -134,6 +137,10 @@ input.switch:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 .cat-dot{display:inline-block;width:.5rem;height:.5rem;border-radius:50%;background:hsl(var(--h) 80% 65%);flex:none}
 .loc-txt{opacity:.9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .also-txt{opacity:.75;flex:none}
+/* destination host: on touch there is no tooltip and no browser status bubble,
+   so without this the phone gives you no way to see where a link goes.
+   --mut, not --mut-soft at reduced opacity: that lands at 2.7:1 on the row bg. */
+.host{margin-left:auto;max-width:8rem;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 .7rem/1.4 ui-monospace,"SF Mono",monospace;color:var(--mut)}
 .x{position:relative;z-index:2;display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.45rem;padding-bottom:.1rem}
 .x .c{background:#1a1d28;border:1px solid #2d3345;color:var(--mut);padding:.15rem .5rem;border-radius:3px;font-size:.75rem;font-weight:600;white-space:nowrap;text-decoration:none;transition:all .1s}
 .x .c:hover{background:#242938;color:#fff;border-color:var(--ac)}
@@ -167,7 +174,8 @@ button,a,input,summary,.r{touch-action:manipulation}
 .cat-search-box input::placeholder{color:var(--mut-soft)}
 .cat-search-box svg{color:var(--ac);flex:none}
 
-.sec-chips{position:sticky;top:.5rem;z-index:20;display:flex;gap:.4rem;overflow-x:auto;overscroll-behavior-x:contain;padding:.4rem 0;margin-bottom:.8rem;background:var(--bg);border-bottom:1px solid #202330}
+.sec-chips{position:sticky;top:.5rem;z-index:20;display:flex;gap:.4rem;overflow-x:auto;overscroll-behavior-x:contain;padding:.4rem 0;margin-bottom:.8rem;background:var(--bg);border-bottom:1px solid #202330;scrollbar-width:none}
+.sec-chips::-webkit-scrollbar{display:none}
 .sec-chip{background:#181a24;border:1px solid #2d3244;color:#e2e8f0;border-radius:4px;font-size:.8rem;font-weight:700;padding:.3rem .75rem;min-height:2rem;cursor:pointer;flex:none;display:inline-flex;align-items:center;gap:.35rem;transition:border-color .12s,color .12s,background .12s}
 .sec-chip:hover{background:#232736;border-color:var(--ac);color:var(--ac)}
 .chip-count{font-family:ui-monospace,"SF Mono",monospace;font-size:.72rem;color:var(--mut-soft);margin-left:.25rem}
@@ -176,6 +184,7 @@ button,a,input,summary,.r{touch-action:manipulation}
 @media(min-width:1024px){
 .cat-rail{display:flex;flex-direction:column;width:15rem;flex:none;position:sticky;top:1rem;max-height:calc(100vh - 2rem);overflow-y:auto}
 .sec-chips{display:none}
+.cat-sec{scroll-margin-top:.5rem}
 }
 .cat-rail-title{font-family:ui-monospace,"SF Mono",monospace;font-size:.75rem;font-weight:800;letter-spacing:.12em;color:var(--mut-soft);margin:.2rem .5rem .6rem}
 .cat-rail-nav{display:flex;flex-direction:column;gap:.25rem}
@@ -184,7 +193,8 @@ button,a,input,summary,.r{touch-action:manipulation}
 .cat-rail-item.active{background:#181d28;color:var(--ac);border-color:var(--ac);font-weight:700}
 .cat-rail-item i{font-family:ui-monospace,"SF Mono",monospace;font-size:.72rem;color:var(--mut-soft);flex:none}
 .cat-content{flex:1;min-width:0;display:flex;flex-direction:column;gap:1.25rem;overflow-anchor:none}
-.cat-sec{background:var(--sf);border:1px solid var(--ln);border-radius:8px;margin:0;overflow:hidden}
+/* scroll-margin clears the sticky jump strip when a chip/rail item jumps to a section */
+.cat-sec{background:var(--sf);border:1px solid var(--ln);border-radius:8px;margin:0;overflow:hidden;scroll-margin-top:3.5rem}
 .cat-sec-header{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.65rem 1rem;background:#161822;border-bottom:1px solid var(--ln)}
 .cat-sec-header-left{display:flex;align-items:center;gap:.6rem;min-width:0}
 .cat-sec-header h3{margin:0;font:800 1rem var(--font-display);letter-spacing:-.01em;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -192,6 +202,30 @@ button,a,input,summary,.r{touch-action:manipulation}
 .btn-copy-sec:hover{opacity:1;color:var(--ac)}
 .cat-sec>.list{border:0;border-radius:0;box-shadow:none}
 .sub{padding:.5rem 1rem;border-top:1px solid #202330;background:#151720;color:var(--ac);font-family:ui-monospace,"SF Mono",monospace;font-size:.8rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+
+/* collapsed section: rows past the cut are folded away (set in core.ts) */
+.over{display:none}
+.cat-sec-toggle{display:inline-flex;align-items:center;gap:.3rem;flex:none;padding:.2rem .5rem;border:1px solid #2d3244;border-radius:3px;background:#181a24;color:var(--mut);font:700 .72rem var(--font-body);cursor:pointer;transition:color .12s,border-color .12s,background .12s;white-space:nowrap}
+.cat-sec-toggle:hover{color:var(--ac);border-color:var(--ac);background:#1a2230}
+.cat-sec-toggle::after{content:"\25be";font-size:.66rem}
+.cat-sec.open .cat-sec-toggle::after{content:"\25b4"}
+/* active jump-strip chip */
+.sec-chip.active{background:#181d28;color:var(--ac);border-color:var(--ac)}
+
+/* wide screens: the section list becomes a card grid. A single-column list wastes
+   ~900px per row (median description is 26 chars) and caps the viewport at 7 rows;
+   cards give 12 rows/screen and let the description sit next to the pin. */
+@media(min-width:900px){
+.cat-content{gap:1rem}
+.cat-sec>.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(19rem,1fr));align-items:start;gap:.5rem;padding:.5rem;border:0;background:transparent;overflow:visible}
+.cat-sec>.list>.r{border:1px solid var(--ln);border-radius:6px}
+.cat-sec>.list>.sub{grid-column:1/-1;margin-top:.25rem;border-radius:6px}
+/* extras are inline here: a hover-revealed chip row would grow the card on hover
+   and shove the whole grid down, so they stay in the flow and drop the chip chrome */
+.cat-sec>.list>.r .x{gap:0;margin-top:.3rem;max-height:none;opacity:1}
+.cat-sec>.list>.r .x .c{background:none;border:0;padding:0;color:var(--ac);font-size:.76rem;text-decoration:underline;text-decoration-color:hsl(199 90% 60%/.4);text-underline-offset:2px}
+.cat-sec>.list>.r .x .c+.c::before{content:"\00b7";color:var(--mut-soft);margin:0 .4em}
+}
 
 /* footer */
 footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin:1.5rem .25rem .5rem;padding-top:.75rem;border-top:1px solid var(--ln);color:var(--mut-soft);font-size:.8rem}
