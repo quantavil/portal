@@ -46,7 +46,8 @@ function read(): Prefs {
         .slice(0, 10);
     }
     if (Array.isArray(o.engines)) {
-      const valid = o.engines.filter((x: unknown) => typeof x === "string");
+      // drop keys that no longer exist (removed engines) so order/indices stay valid
+      const valid = o.engines.filter((x: unknown): x is string => typeof x === "string" && DEFAULT_ENGINES.includes(x));
       if (valid.length) {
         // ensure all DEFAULT_ENGINES exist
         const set = new Set(valid);
@@ -57,7 +58,7 @@ function read(): Prefs {
       }
     }
     if (Array.isArray(o.disabledEngines)) {
-      p.disabledEngines = o.disabledEngines.filter((x: unknown): x is string => typeof x === "string");
+      p.disabledEngines = o.disabledEngines.filter((x: unknown): x is string => typeof x === "string" && DEFAULT_ENGINES.includes(x));
     }
   } catch {
     /* first run, blocked storage, or corrupt value: start empty */

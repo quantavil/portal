@@ -60,7 +60,7 @@ const ENGINES = {
   d: { n: "DDG", u: (s: string) => (s ? `https://duckduckgo.com/?q=${encodeURIComponent(s)}` : "https://duckduckgo.com"), svg: duckDuckGoSvg, cls: "dock-chip-ddg" },
   gh: { n: "GitHub", u: (s: string) => (s ? `https://github.com/search?q=${encodeURIComponent(s)}` : "https://github.com"), svg: githubSvg, cls: "dock-chip-github" },
   w: { n: "Wiki", u: (s: string) => (s ? `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(s)}` : "https://en.wikipedia.org"), svg: wikiSvg, cls: "dock-chip-wiki" },
-  r: { n: "Reddit", u: (s: string) => (s ? `https://www.reddit.com/r/piracy/search/?q=${encodeURIComponent(s)}` : "https://www.reddit.com/r/piracy"), svg: redditSvg, cls: "dock-chip-reddit" },
+  r: { n: "Reddit", u: (s: string) => (s ? `https://www.reddit.com/search/?q=${encodeURIComponent(s)}` : "https://www.reddit.com"), svg: redditSvg, cls: "dock-chip-reddit" },
 } as const;
 type EngineKey = keyof typeof ENGINES;
 
@@ -128,44 +128,6 @@ function renderDockEngines() {
 function openExternal(url: string) {
   if (prefs.newTab) window.open(url, "_blank", "noopener,noreferrer");
   else location.assign(url);
-}
-
-/** Chip strip under the status line. Shown for any non-empty term; Tab-reachable on desktop, tap on mobile. */
-function extStripEl(): HTMLElement {
-  const found = document.getElementById("ext");
-  if (found) return found;
-  const bar = document.createElement("div");
-  bar.id = "ext";
-  bar.className = "ext-strip";
-  bar.hidden = true;
-  st.after(bar);
-  return bar;
-}
-
-function renderExtStrip(term: string) {
-  const bar = extStripEl();
-  bar.textContent = "";
-  if (!term) {
-    bar.hidden = true;
-    return;
-  }
-  const lbl = document.createElement("span");
-  lbl.className = "ext-lbl";
-  lbl.textContent = "Web:";
-  bar.append(lbl);
-  const disabled = new Set(prefs.disabledEngines);
-  const ordered = prefs.engines.filter((k) => k in ENGINES && !disabled.has(k)) as EngineKey[];
-  ordered.forEach((k) => {
-    const conf = ENGINES[k];
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "ext-chip keycap";
-    b.innerHTML = `${conf.svg(12)}<span>${conf.n}</span>`;
-    b.setAttribute("aria-label", `Search ${conf.n} for "${term}"`);
-    b.addEventListener("click", () => openExternal(conf.u(term)));
-    bar.append(b);
-  });
-  bar.hidden = false;
 }
 
 /** Zero-hit external row. Plain anchor (class ext-link, never a.n) so recents never record it. */
@@ -266,9 +228,8 @@ function showResults(term: string) {
   const r = search(ix, term, { star: prefs.star, nsfw: prefs.nsfw }, limit);
   hits = r.hits;
   st.hidden = false;
-  renderExtStrip(term);
   if (!r.total) {
-    st.textContent = `Nothing matches \u201c${term}\u201d. Try fewer or shorter words, or search the web below.`;
+    st.textContent = `Nothing matches \u201c${term}\u201d. Try fewer or shorter words, or use a Web chip above.`;
     const rows = (Object.keys(ENGINES) as EngineKey[]).map((k, i) => extRow(k, term, i));
     list.replaceChildren(...rows);
     list.hidden = false;
@@ -609,7 +570,6 @@ function route() {
   if (barEl) barEl.hidden = showVw || showSettings;
   if (optsEl) optsEl.hidden = showVw || showSettings;
 
-  if (!showRes) document.getElementById("ext")?.setAttribute("hidden", "");
   list.hidden = !showRes;
   st.hidden = !showRes;
   view.hidden = !showVw;

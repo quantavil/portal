@@ -30,6 +30,13 @@ export const hueCss = () => Array.from({ length: PAGES.length + 1 }, (_, i) => `
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 const fmt = (n: number) => n.toLocaleString("en-US");
+// Samples are separate spans so narrow screens can drop the third one; the
+// middot separators are generated in CSS (style.css `.tl-samples .ts::after`)
+// so hiding one cannot leave a dangling separator behind.
+const samplesHtml = (stars?: string[]): string =>
+  stars && stars.length
+    ? `<span class="tl-samples">${stars.map((s) => `<span class="ts">${esc(s)}</span>`).join("")}</span>`
+    : "";
 
 const SEARCH_ICON = searchSvg(22);
 const FAVICON = "data:image/svg+xml," + encodeURIComponent(FAVICON_SVG);
@@ -37,11 +44,11 @@ const FAVICON = "data:image/svg+xml," + encodeURIComponent(FAVICON_SVG);
 export function renderHtml(t: TemplateInput): string {
   const tiles = PAGES.map((p, i) => {
     const stars = t.topStarred?.[p.k]?.slice(0, 3);
-    const starHtml = stars && stars.length ? `<span class="tl-samples">${esc(stars.join(" \u00b7 "))}</span>` : "";
+    const starHtml = samplesHtml(stars);
     return `<a class="tl keycap h${i}" id="t-${p.k}" href="#${p.k}"><div class="tl-top"><span class="tl-title">${esc(p.n)}</span><i class="tl-count">${fmt(t.counts[p.k] ?? 0)}</i></div>${starHtml}</a>`;
   }).join("");
   const nsfwStars = t.topStarred?.[NSFW_KEY]?.slice(0, 3);
-  const nsfwStarHtml = nsfwStars && nsfwStars.length ? `<span class="tl-samples">${esc(nsfwStars.join(" \u00b7 "))}</span>` : "";
+  const nsfwStarHtml = samplesHtml(nsfwStars);
   const nsfwTile = t.hasNsfw ? `<a class="tl keycap h${PAGES.length}" id="t-${NSFW_KEY}" href="#${NSFW_KEY}" hidden><div class="tl-top"><span class="tl-title">${NSFW_TITLE}</span><i class="tl-count"></i></div>${nsfwStarHtml}</a>` : "";
   const nsfwChip = t.hasNsfw ? '<label class="chip keycap" id="nsfw-chip" hidden><input type="checkbox" id="nsfw"><span>Show NSFW</span></label>' : "";
 

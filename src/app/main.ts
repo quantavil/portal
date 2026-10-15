@@ -109,7 +109,7 @@ document.addEventListener("click", (e) => {
     d: (s) => (s ? `https://duckduckgo.com/?q=${encodeURIComponent(s)}` : "https://duckduckgo.com"),
     gh: (s) => (s ? `https://github.com/search?q=${encodeURIComponent(s)}` : "https://github.com"),
     w: (s) => (s ? `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(s)}` : "https://en.wikipedia.org"),
-    r: (s) => (s ? `https://www.reddit.com/r/piracy/search/?q=${encodeURIComponent(s)}` : "https://www.reddit.com/r/piracy"),
+    r: (s) => (s ? `https://www.reddit.com/search/?q=${encodeURIComponent(s)}` : "https://www.reddit.com"),
   };
   if (eng && map[eng]) {
     const url = map[eng](term);
