@@ -37,3 +37,16 @@ export const PAGES: readonly { k: string; n: string }[] = [
 export const NSFW_KEY = "nsfw";
 export const NSFW_TITLE = "NSFW";
 export const RAW_BASE = "https://raw.githubusercontent.com/fmhy/edit/main/docs/";
+
+/**
+ * Golden-angle hue for page `i`. Shared by the SSR tiles (template.ts) and the
+ * runtime section dot (render.ts) so the two can never drift apart.
+ */
+export const hueOf = (i: number) => Math.round((i * 137.508) % 360);
+
+/**
+ * Counts always render with en-US grouping. A bare toLocaleString() follows the
+ * reader's locale, so the same number is printed differently by the server and
+ * by the client (e.g. "1,234" then "1 234").
+ */
+export const fmtCount = (n: number) => n.toLocaleString("en-US");

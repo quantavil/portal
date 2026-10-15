@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { PAGES, NSFW_KEY, NSFW_TITLE } from "../shared/pages";
+import { PAGES, NSFW_KEY, NSFW_TITLE, hueOf, fmtCount } from "../shared/pages";
 import {
   FAVICON_SVG,
   keyboardSvg,
@@ -25,11 +25,9 @@ export type TemplateInput = {
 const sha256 = (s: string) => "sha256-" + createHash("sha256").update(s).digest("base64");
 
 /** Golden-angle hue per category so neighbours are always distinguishable. */
-const hueOf = (i: number) => Math.round((i * 137.508) % 360);
 export const hueCss = () => Array.from({ length: PAGES.length + 1 }, (_, i) => `.h${i}{--h:${hueOf(i)}}`).join("");
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-const fmt = (n: number) => n.toLocaleString("en-US");
 // Samples are separate spans so narrow screens can drop the third one; the
 // middot separators are generated in CSS (style.css `.tl-samples .ts::after`)
 // so hiding one cannot leave a dangling separator behind.
@@ -45,7 +43,7 @@ export function renderHtml(t: TemplateInput): string {
   const tiles = PAGES.map((p, i) => {
     const stars = t.topStarred?.[p.k]?.slice(0, 3);
     const starHtml = samplesHtml(stars);
-    return `<a class="tl keycap h${i}" id="t-${p.k}" href="#${p.k}"><div class="tl-top"><span class="tl-title">${esc(p.n)}</span><i class="tl-count">${fmt(t.counts[p.k] ?? 0)}</i></div>${starHtml}</a>`;
+    return `<a class="tl keycap h${i}" id="t-${p.k}" href="#${p.k}"><div class="tl-top"><span class="tl-title">${esc(p.n)}</span><i class="tl-count">${fmtCount(t.counts[p.k] ?? 0)}</i></div>${starHtml}</a>`;
   }).join("");
   const nsfwStars = t.topStarred?.[NSFW_KEY]?.slice(0, 3);
   const nsfwStarHtml = samplesHtml(nsfwStars);
@@ -53,7 +51,7 @@ export function renderHtml(t: TemplateInput): string {
   const nsfwChip = t.hasNsfw ? '<label class="chip keycap" id="nsfw-chip" hidden><input type="checkbox" id="nsfw"><span>Show NSFW</span></label>' : "";
 
   const totalLinks = Object.values(t.counts).reduce((a, b) => a + b, 0);
-  const searchPlaceholder = `Search ${fmt(totalLinks)} links or dispatch to Web Engines\u2026`;
+  const searchPlaceholder = `Search ${fmtCount(totalLinks)} links or dispatch to Web Engines\u2026`;
 
   const csp = [
     "default-src 'none'",

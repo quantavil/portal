@@ -1,6 +1,6 @@
-:root{--font-display:ui-monospace,"SF Mono","Cascadia Code",Menlo,monospace,system-ui,sans-serif;--font-body:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;--bg:#090a0e;--sf:#12141c;--sf-subtle:#181a24;--fg:#ffffff;--mut:#94a3b8;--mut-soft:#64748b;--ln:#242736;--edge:#0000;--ac:#38bdf8;--ac2:#818cf8;--ac-subtle:#142838;--st:#ffd479;--l:65%;--on:#090a0e;--engine-yandex:#ff3333;--engine-google:#4285f4;--engine-ddg:#de5833;--engine-reddit:#ff4500;letter-spacing:0;font:16px/1.5 var(--font-body);color-scheme:dark}
-[data-theme=light]{--bg:#f8fafc;--sf:#ffffff;--sf-subtle:#f1f5f9;--fg:#0f172a;--mut:#475569;--mut-soft:#475569;--ln:#e2e8f0;--ac:#0284c7;--ac2:#6366f1;--ac-subtle:#e0f2fe;--l:45%;--on:#ffffff;--st:#d97706;color-scheme:light}
-[data-theme=dark],:root{--bg:#090a0e;--sf:#12141c;--sf-subtle:#181a24;--fg:#ffffff;--mut:#94a3b8;--mut-soft:#64748b;--ln:#242736;--ac:#38bdf8;--ac2:#818cf8;--l:65%;--on:#090a0e;color-scheme:dark}
+:root{--font-display:ui-monospace,"SF Mono","Cascadia Code",Menlo,monospace,system-ui,sans-serif;--font-body:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;--bg:#090a0e;--sf:#12141c;--sf-subtle:#181a24;--fg:#ffffff;--mut:#94a3b8;--mut-soft:#64748b;--ln:#242736;--ac:#38bdf8;--st:#ffd479;--on:#090a0e;--engine-yandex:#ff3333;--engine-google:#4285f4;--engine-ddg:#de5833;--engine-reddit:#ff4500;letter-spacing:0;font:16px/1.5 var(--font-body);color-scheme:dark}
+[data-theme=light]{--bg:#f8fafc;--sf:#ffffff;--sf-subtle:#f1f5f9;--fg:#0f172a;--mut:#475569;--mut-soft:#475569;--ln:#e2e8f0;--ac:#0284c7;--on:#ffffff;--st:#d97706;color-scheme:light}
+[data-theme=dark],:root{--bg:#090a0e;--sf:#12141c;--sf-subtle:#181a24;--fg:#ffffff;--mut:#94a3b8;--mut-soft:#64748b;--ln:#242736;--ac:#38bdf8;--st:#ffd479;--on:#090a0e;color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
@@ -12,8 +12,8 @@ main{max-width:72rem;margin:0 auto;padding:0 1.25rem 2rem;overflow-x:clip}
 a{color:inherit;text-decoration:none}
 button,input,optgroup,select,textarea{font-family:inherit;font-size:inherit;line-height:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px}
-kbd,.ho{font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace}
-i,.cat-sec-count,.pill-badge,.badge-pill{font-style:normal;font-variant-numeric:tabular-nums}
+kbd{font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace}
+i,.cat-sec-count,.pill-badge{font-style:normal;font-variant-numeric:tabular-nums}
 [dir="auto"]{unicode-bidi:plaintext}
 .keycap{background:var(--sf-subtle);border:1px solid var(--ln);border-radius:4px;box-shadow:none;transition:background-color .12s ease,border-color .15s ease,color .12s ease}
 .keycap:hover{background:#232736;border-color:var(--ac);color:#fff}
@@ -63,10 +63,6 @@ input[type="search"]::-webkit-search-cancel-button{display:none}
 .dock-chip-google:hover{border-color:var(--engine-google)}
 .dock-chip-ddg:hover{border-color:var(--engine-ddg)}
 .dock-chip-reddit:hover{border-color:var(--engine-reddit)}
-.chip-icon-yandex{color:var(--engine-yandex);font-weight:900}
-.chip-icon-google{color:var(--engine-google);font-weight:900}
-.chip-icon-ddg{color:var(--engine-ddg);font-weight:900}
-.chip-icon-reddit{color:var(--engine-reddit);font-weight:900}
 
 /* opts */
 .opts{display:flex;flex-wrap:wrap;justify-content:center;gap:.4rem;margin:0 .25rem .45rem}
@@ -131,7 +127,6 @@ input.switch:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 .r .n::after{content:"";position:absolute;inset:0;z-index:1}
 .r:hover .n{color:var(--ac)}
 .s{color:var(--st);font-size:.85rem;line-height:1}
-.ho{display:none!important}
 .d{margin:.2rem 0 0;color:#8b95a5;font-size:.84rem;line-height:1.45;overflow-wrap:anywhere;display:-webkit-box;line-clamp:2;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .w{display:flex;align-items:center;gap:.35rem;margin:.35rem 0 0;color:var(--mut-soft);font-size:.76rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cat-dot{display:inline-block;width:.5rem;height:.5rem;border-radius:50%;background:hsl(var(--h) 80% 65%);flex:none}

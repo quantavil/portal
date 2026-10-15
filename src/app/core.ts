@@ -1,5 +1,6 @@
 /** Loaded after first paint (or on first interaction): dataset, search, category views, updater. */
 import { F_STAR, type PageData, type Seed } from "../shared/types";
+import { fmtCount as fmt } from "../shared/pages";
 import { loadNsfw, loadSeed, mergePages, readStored } from "./data";
 import { idbKV } from "./kv";
 import { entryRow, toRows, type Row } from "./model";
@@ -48,7 +49,6 @@ let ready = false;
 let hasNavigated = false;
 let catObs: IntersectionObserver | null = null;
 
-const fmt = (n: number) => n.toLocaleString();
 const vis = () => pages.filter((p) => !p.nsfw || prefs.nsfw);
 const countOf = (p: PageData) => p.s.reduce((n, s) => n + s.e.length + s.b.reduce((m, b) => m + b.e.length, 0), 0);
 

@@ -1,15 +1,13 @@
 import { F_STAR } from "../shared/types";
 import { canon } from "../shared/links";
 import { PIN_SVG, starSvg } from "../shared/svg";
-import { PAGES, NSFW_KEY } from "../shared/pages";
+import { PAGES, NSFW_KEY, hueOf } from "../shared/pages";
 import type { Row } from "./model";
 import { isPinned } from "./pins";
 import { prefs } from "./store";
 
-const PAGE_HUES: Record<string, number> = Object.fromEntries(
-  PAGES.map((p, i) => [p.k, Math.round((i * 137.508) % 360)]),
-);
-PAGE_HUES[NSFW_KEY] = Math.round((PAGES.length * 137.508) % 360);
+const PAGE_HUES: Record<string, number> = Object.fromEntries(PAGES.map((p, i) => [p.k, hueOf(i)]));
+PAGE_HUES[NSFW_KEY] = hueOf(PAGES.length);
 export const catHue = (k: string) => PAGE_HUES[k] ?? 200;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: string): HTMLElementTagNameMap[K] {
